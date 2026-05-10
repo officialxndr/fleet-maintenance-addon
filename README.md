@@ -80,8 +80,9 @@ services:
 ```
 Bash
 docker-compose up -d
-Access the app at http://[YOUR_SERVER_IP]:5000.
 ```
+Access the app at `http://localhost:5000`
+
 
 
 🛠️ Coming Soon
