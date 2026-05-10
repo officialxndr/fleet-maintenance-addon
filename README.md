@@ -45,7 +45,7 @@ version: '3.8'
 
 services:
   fleet-maintenance:
-    image: ghcr.io/[YOUR_GITHUB_USERNAME]/[YOUR_REPO_NAME]:latest
+    image: ghcr.io/officialxndr/fleet-maintenance-addon:latest
     container_name: fleet-maintenance
     build: .
     restart: unless-stopped
