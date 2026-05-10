@@ -4,6 +4,10 @@ on:
   push:
     branches: ['main']
 
+# This fixes the Node.js 20 Deprecation Warning!
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   build-and-push-image:
     runs-on: ubuntu-latest
@@ -23,8 +27,9 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push Docker image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
-          context: .
+          # THIS IS THE FIX: We tell Docker to look inside the subfolder!
+          context: ./fleet_maintenance
           push: true
           tags: ghcr.io/officialxndr/fleet-maintenance-addon:latest
