@@ -1,23 +1,23 @@
-Fleet Maintenance
+# Fleet Maintenance
 
 A powerful, self-hosted personal car management system and vehicle tracking dashboard. Designed to go far beyond a simple logbook, this app features predictive maintenance math, job-specific "Garage Mode" toolcards, Home Assistant intelligence, and secure read-only guest sharing.
 
 Whether you run it seamlessly as a Home Assistant Add-on or as a Standalone Docker Container, Fleet Maintenance gives you complete control over your garage's data.
 
-✨ Key Features
+## ✨ Key Features
 
-Intelligent Interval Tracking: Tracks maintenance based on both Time (Months) and Distance (Miles/Km). Uses your Average Daily Mileage (ADM) to predict exactly when a service will be due.
-Garage Mode: Don't dig through massive manuals. Click on a specific job (e.g., "Engine Oil & Filter") to instantly see only the required parts, fluid capacities, and specific Torque Specs for that exact job.
-Smart AI Import/Export: Built-in "Copy AI Prompt" buttons that secretly scrape your database's vocabulary to ensure external AI models generate perfectly formatted, auto-linking CSVs.
+* Intelligent Interval Tracking: Tracks maintenance based on both Time (Months) and Distance (Miles/Km). Uses your Average Daily Mileage (ADM) to predict exactly when a service will be due.
+* Garage Mode: Don't dig through massive manuals. Click on a specific job (e.g., "Engine Oil & Filter") to instantly see only the required parts, fluid capacities, and specific Torque Specs for that exact job.
+* Smart AI Import/Export: Built-in "Copy AI Prompt" buttons that secretly scrape your database's vocabulary to ensure external AI models generate perfectly formatted, auto-linking CSVs.
 Total Cost of Ownership (TCO) & Fuel Tracking: Keep track of every dollar spent on parts, labor, and fuel.
-Read-Only Guest Links: Generate a secure, passwordless URL to share with family members so they can view upcoming maintenance or log fuel without altering your intervals or deleting data.
-Home Assistant Integration:
-Live Mileage Sync: Automatically pulls live odometer readings from HA sensors.
-Battery Intelligence: Monitors your local outdoor temperature via HA. If it drops below zero and your battery is over 4 years old, the app triggers a high-risk warning.
-MQTT Discovery: Pushes your vehicle's upcoming maintenance status back into Home Assistant as native sensors.
+* Read-Only Guest Links: Generate a secure, passwordless URL to share with family members so they can view upcoming maintenance or log fuel without altering your intervals or deleting data.
+* Home Assistant Integration:
+* Live Mileage Sync: Automatically pulls live odometer readings from HA sensors.
+* Battery Intelligence: Monitors your local outdoor temperature via HA. If it drops below zero and your battery is over 4 years old, the app triggers a high-risk warning.
+* MQTT Discovery: Pushes your vehicle's upcoming maintenance status back into Home Assistant as native sensors.
 
 
-🚀 Installation Option A: Home Assistant OS (Add-on)
+## 🚀 Installation Option A: Home Assistant OS (Add-on)
 
 If you run Home Assistant OS or Supervised, you can install this app directly from the Add-on Store.
 
