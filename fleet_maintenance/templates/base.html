@@ -289,8 +289,17 @@
 
                 try {
                     const gt = JSON.parse(document.getElementById('global-torque-data').textContent);
-                    gt.push({ id: data.id, component: formData.get('component'), torque: formData.get('torque'), labels: formData.get('labels') });
+                    const newEntry = { id: data.id, component: formData.get('component'), torque: formData.get('torque'), labels: formData.get('labels') || '' };
+                    gt.push(newEntry);
                     document.getElementById('global-torque-data').textContent = JSON.stringify(gt);
+
+                    // Also sync the Glovebox & Specs tab torque table if it is present in the DOM
+                    const specsTbody = document.getElementById('torque-specs-tbody');
+                    if (specsTbody && typeof buildTorqueRow === 'function') {
+                        const emptyRow = document.getElementById('torque-empty-row');
+                        if (emptyRow) emptyRow.remove();
+                        specsTbody.insertAdjacentHTML('beforeend', buildTorqueRow(newEntry, true));
+                    }
                 } catch (err) { }
             }
         }
