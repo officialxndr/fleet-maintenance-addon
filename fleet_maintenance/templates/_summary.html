@@ -88,24 +88,18 @@
                 </div>
             </div>
             {% if not shared_mode %}
-            <form onsubmit="submitQuickLog(event)" action="{{ ingress_path }}/api/{{ current_vin }}/add_log" method="POST"
-                class="mt-auto border-t dark:border-zinc-700 pt-3 flex flex-col gap-2 admin-only">
+            <form action="{{ ingress_path }}/api/{{ current_vin }}/add_log" method="POST" class="mt-auto border-t dark:border-zinc-700 pt-3 flex flex-col gap-2 admin-only">
                 <input type="hidden" name="service_name" value="{{ s.id }}">
                 <input type="hidden" name="action" value="log_and_track">
                 <div class="flex gap-2">
-                    <input type="date" name="date" value="{{ today_date }}" required
-                        class="text-xs border dark:border-zinc-700 rounded p-1.5 w-1/3 bg-white dark:bg-zinc-800 dark:text-white">
-                    <input type="number" name="mileage" value="{{ vehicle_data.current_mileage }}" required
-                        class="text-xs border dark:border-zinc-700 rounded p-1.5 w-1/3 bg-white dark:bg-zinc-800 dark:text-white">
-                    <input type="text" name="notes" placeholder="Notes..."
-                        class="text-xs border dark:border-zinc-700 rounded p-1.5 w-1/3 bg-white dark:bg-zinc-800 dark:text-white">
+                    <input type="date" name="date" value="{{ today_date }}" required class="text-xs border dark:border-zinc-700 rounded p-1.5 w-1/3 bg-white dark:bg-zinc-800 dark:text-white">
+                    <input type="number" name="mileage" value="{{ vehicle_data.current_mileage }}" required class="text-xs border dark:border-zinc-700 rounded p-1.5 w-1/3 bg-white dark:bg-zinc-800 dark:text-white">
+                    <input type="text" name="notes" placeholder="Notes..." class="text-xs border dark:border-zinc-700 rounded p-1.5 w-1/3 bg-white dark:bg-zinc-800 dark:text-white">
                 </div>
-                <button type="submit"
-                    class="bg-accent text-sm py-2 px-3 rounded w-full font-bold text-white transition hover:brightness-90">✓ Log
-                    Service</button>
+                <button type="submit" class="bg-accent text-sm py-2 px-3 rounded w-full font-bold text-white transition hover:brightness-90">✓ Log Service</button>
             </form>
             {% endif %}
-            </div>
-            {% endfor %}
+        </div>
+        {% endfor %}
     </div>
 </div>
