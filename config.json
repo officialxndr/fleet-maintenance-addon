@@ -1,0 +1,33 @@
+{
+  "name": "Fleet Maintenance",
+  "version": "1.0.0",
+  "slug": "fleet_maintenance",
+  "description": "A powerful Dealership Management System and vehicle tracking dashboard.",
+  "url": "https://github.com/officialxndr/fleet-maintenance-addon",
+  "arch": ["aarch64", "amd64", "armhf", "armv7", "i386", "i386", "x86_64"],
+  "startup": "application",
+  "boot": "auto",
+  "init": false,
+  "map": ["config:rw", "share:rw"],
+  "options": {
+    "ha_url": "http://supervisor/core",
+    "ha_token": "",
+    "mqtt_broker": "core-mosquitto",
+    "mqtt_port": 1883,
+    "mqtt_user": "addons",
+    "mqtt_pass": ""
+  },
+  "schema": {
+    "ha_url": "str",
+    "ha_token": "str",
+    "mqtt_broker": "str",
+    "mqtt_port": "port",
+    "mqtt_user": "str",
+    "mqtt_pass": "password?"
+  },
+  "ports": {
+    "5000/tcp": 5000
+  },
+  "panel_icon": "mdi:car-wrench",
+  "panel_title": "Fleet Maintenance"
+}
