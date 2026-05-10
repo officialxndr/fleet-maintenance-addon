@@ -56,7 +56,7 @@ services:
       - ./fleet_data:/app/data
     environment:
       # Optional: Remove these if you do not use Home Assistant/MQTT
-      - HA_URL=[http://192.168.1.](http://192.168.1.)XXX:8123
+      - HA_URL=http://homeassistant.local:8123
       - HA_TOKEN=your_long_lived_access_token_here
       - MQTT_BROKER=192.168.1.XXX
       - MQTT_PORT=1883
