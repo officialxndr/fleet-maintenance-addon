@@ -240,6 +240,31 @@
             if ((await res.json()).status === 'success') document.getElementById(`torque-${torqueId}`).remove();
         }
 
+        async function submitLogService(btn) {
+            const container = btn.closest('.log-service-form');
+            const action = container.dataset.action;
+            const formData = new FormData();
+            container.querySelectorAll('[name]').forEach(el => formData.append(el.name, el.value));
+            const dateInput = container.querySelector('[name="date"]');
+            const mileageInput = container.querySelector('[name="mileage"]');
+            if (!dateInput.value || !mileageInput.value) { dateInput.reportValidity(); return; }
+            btn.disabled = true;
+            btn.textContent = '⏳ Saving...';
+            try {
+                const res = await fetch(action, { method: 'POST', body: formData, headers: { 'Accept': 'application/json' } });
+                const data = await res.json();
+                if (data.status === 'success') {
+                    btn.textContent = '✓ Logged!';
+                    btn.classList.add('opacity-60');
+                    setTimeout(() => { btn.textContent = '✓ Log Service'; btn.disabled = false; btn.classList.remove('opacity-60'); }, 2000);
+                } else { throw new Error('Failed'); }
+            } catch (err) {
+                btn.textContent = '✗ Error';
+                btn.disabled = false;
+                setTimeout(() => { btn.textContent = '✓ Log Service'; }, 2000);
+            }
+        }
+
         function closeServiceDetails() { document.getElementById('service-details-modal').classList.add('hidden'); }
 
         document.addEventListener('DOMContentLoaded', () => {

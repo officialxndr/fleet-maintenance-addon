@@ -318,6 +318,8 @@ def add_log(vin):
     db = load_db()
     log_entry_and_sync(vin, request.form.get("service_name"), request.form.get("date"), int(request.form.get("mileage", 0)), request.form.get("notes", ""), float(request.form.get("cost_parts", 0) or 0), float(request.form.get("cost_labor", 0) or 0), db, track_interval=(request.form.get("action", "log_and_track") == "log_and_track"))
     save_db(db)
+    if request.headers.get('Accept') == 'application/json':
+        return jsonify({"status": "success"})
     return redirect(f"{get_base_path()}/vehicle/{vin}")
 
 @app.route('/api/<vin>/update_log/<log_id>', methods=['POST'])
