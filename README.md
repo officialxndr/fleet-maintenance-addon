@@ -66,9 +66,11 @@ services:
 
 Run the container:
 
-```Bash```
-```docker-compose up -d```
-```Access the app at http://[YOUR_SERVER_IP]:5000.```
+```
+Bash
+docker-compose up -d
+Access the app at http://[YOUR_SERVER_IP]:5000.
+```
 
 
 🛠️ Coming Soon
