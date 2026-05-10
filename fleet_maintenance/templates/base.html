@@ -152,13 +152,35 @@
             document.getElementById('service-details-modal').classList.remove('hidden');
         }
 
+        function garagePartHtml(id, name, value, showDelete) {
+            const del = showDelete ? `<button type="button" onclick="deleteGarageItem(this, '${id}', 'part')" class="text-red-400 hover:text-red-600 transition p-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20" title="Remove">✕</button>` : '';
+            return `<div id="part-${id}" class="flex items-center justify-between gap-3 bg-gray-50 dark:bg-zinc-800/60 border border-gray-200 dark:border-zinc-700 rounded-lg px-4 py-3">
+                <span class="text-sm font-medium text-gray-700 dark:text-gray-300">${name}</span>
+                <div class="flex items-center gap-2 shrink-0">
+                    <span class="text-xs font-bold text-gray-800 dark:text-gray-100 bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 px-2.5 py-1 rounded-md shadow-sm">${value}</span>
+                    ${del}
+                </div>
+            </div>`;
+        }
+
+        function garageTorqueHtml(id, name, val, isGlobal, showDelete) {
+            let badge = '';
+            if (isGlobal) badge = '<span class="text-[10px] font-medium text-gray-400 dark:text-zinc-500 italic px-2 py-0.5 bg-gray-100 dark:bg-zinc-800 rounded" title="Auto-linked from Global Specs">Auto</span>';
+            else if (showDelete) badge = `<button type="button" onclick="deleteGarageItem(this, '${id}', 'torque')" class="text-red-400 hover:text-red-600 transition p-1 rounded hover:bg-red-50 dark:hover:bg-red-900/20" title="Remove">✕</button>`;
+            return `<div id="torque-${id}" class="flex items-center justify-between gap-3 bg-accent/5 dark:bg-accent/10 border border-accent/20 rounded-lg px-4 py-3">
+                <span class="text-sm font-medium text-gray-700 dark:text-gray-300">${name}</span>
+                <div class="flex items-center gap-2 shrink-0">
+                    <span class="text-sm font-bold text-accent bg-white dark:bg-zinc-900 border border-accent/30 px-2.5 py-1 rounded-md shadow-sm">${val}</span>
+                    ${badge}
+                </div>
+            </div>`;
+        }
+
         function renderGarageLists(s, isAdmin) {
             let partsHtml = '';
             if (s.garage_parts && s.garage_parts.length > 0) {
-                s.garage_parts.forEach(p => {
-                    partsHtml += `<div id="part-${p.id}" class="flex justify-between items-center py-1 border-b border-gray-100 dark:border-zinc-800 last:border-0"><span class="text-gray-600 dark:text-zinc-300 text-xs">${p.name}</span><div class="flex items-center"><span class="font-bold text-gray-800 dark:text-gray-200 text-xs">${p.value}</span>${isAdmin ? `<button type="button" onclick="deleteGarageItem(this, '${p.id}', 'part')" class="ml-3 text-red-400 hover:text-red-600 text-xs">✕</button>` : ''}</div></div>`;
-                });
-            } else { partsHtml = '<p class="text-[10px] text-gray-400 italic py-1 no-data">No custom parts linked.</p>'; }
+                s.garage_parts.forEach(p => { partsHtml += garagePartHtml(p.id, p.name, p.value, isAdmin); });
+            } else { partsHtml = '<p class="text-xs text-gray-400 dark:text-zinc-500 italic py-3 text-center no-data">No parts linked yet.</p>'; }
             document.getElementById('sd-parts-list').innerHTML = partsHtml;
 
             let autoTorques = [];
@@ -185,10 +207,9 @@
                     const name = t.name || t.component;
                     const val = t.value || t.torque;
                     const isGlobal = !!t.component;
-                    const delBtn = (isAdmin && !isGlobal) ? `<button type="button" onclick="deleteGarageItem(this, '${t.id}', 'torque')" class="ml-3 text-red-400 hover:text-red-600 text-xs">✕</button>` : (isGlobal ? '<span class="ml-3 text-[10px] text-gray-400 font-normal italic" title="Auto-linked from Global Specs">(Auto)</span>' : '');
-                    torqueHtml += `<div id="torque-${t.id}" class="flex justify-between items-center py-1 border-b border-gray-100 dark:border-zinc-800 last:border-0"><span class="text-gray-600 dark:text-zinc-300 text-xs">${name}</span><div class="flex items-center"><span class="font-bold text-accent text-xs">${val}</span>${delBtn}</div></div>`;
+                    torqueHtml += garageTorqueHtml(t.id, name, val, isGlobal, isAdmin);
                 });
-            } else { torqueHtml = '<p class="text-[10px] text-gray-400 italic py-1 no-data">No torque specs linked.</p>'; }
+            } else { torqueHtml = '<p class="text-xs text-gray-400 dark:text-zinc-500 italic py-3 text-center no-data">No torque specs linked yet.</p>'; }
             document.getElementById('sd-torque-list').innerHTML = torqueHtml;
         }
 
@@ -199,7 +220,7 @@
             const res = await fetch(form.action, { method: 'POST', body: formData, headers: { 'Accept': 'application/json' } });
             const data = await res.json();
             if (data.status === 'success') {
-                const html = `<div id="part-${data.id}" class="flex justify-between items-center py-1 border-b border-gray-100 dark:border-zinc-800 last:border-0"><span class="text-gray-600 dark:text-zinc-300 text-xs">${formData.get('name')}</span><div class="flex items-center"><span class="font-bold text-gray-800 dark:text-gray-200 text-xs">${formData.get('value')}</span><button type="button" onclick="deleteGarageItem(this, '${data.id}', 'part')" class="ml-3 text-red-400 hover:text-red-600 text-xs">✕</button></div></div>`;
+                const html = garagePartHtml(data.id, formData.get('name'), formData.get('value'), true);
                 const list = document.getElementById('sd-parts-list');
                 const noData = list.querySelector('.no-data'); if (noData) noData.remove();
                 list.insertAdjacentHTML('beforeend', html);
@@ -214,7 +235,7 @@
             const res = await fetch(form.action, { method: 'POST', body: formData, headers: { 'Accept': 'application/json' } });
             const data = await res.json();
             if (data.status === 'success') {
-                const html = `<div id="torque-${data.id}" class="flex justify-between items-center py-1 border-b border-gray-100 dark:border-zinc-800 last:border-0"><span class="text-gray-600 dark:text-zinc-300 text-xs">${formData.get('component')}</span><div class="flex items-center"><span class="font-bold text-accent text-xs">${formData.get('torque')}</span><span class="ml-3 text-[10px] text-gray-400 font-normal italic">(Auto)</span></div></div>`;
+                const html = garageTorqueHtml(data.id, formData.get('component'), formData.get('torque'), false, true);
                 const list = document.getElementById('sd-torque-list');
                 const noData = list.querySelector('.no-data'); if (noData) noData.remove();
                 list.insertAdjacentHTML('beforeend', html);
