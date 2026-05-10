@@ -1,0 +1,11 @@
+# Ignore local databases and user data
+data/
+fleet_database.json
+options.json
+
+# Ignore Python cache files
+__pycache__/
+*.pyc
+
+# Ignore environment variables if you create them later
+.env

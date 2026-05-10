@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fleet Maintenance</title>
+    {% if vehicle_data %}
+        <link rel="manifest" href="{{ ingress_path }}/manifest.json">
+        <meta name="theme-color" content="#18181b">
+        <link rel="apple-touch-icon" href="{{ ingress_path }}/static/icon.png">
+    {% endif %}
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>tailwind.config = { darkMode: 'class' }</script>
+    
+    <style>
+        .bg-pattern-solid { background-image: none; }
+        .bg-pattern-dots { background-image: radial-gradient(rgba(156, 163, 175, 0.3) 1px, transparent 1px); background-size: 20px 20px; }
+        .dark .bg-pattern-dots { background-image: radial-gradient(rgba(82, 82, 91, 0.4) 1px, transparent 1px); }
+        .bg-pattern-grid { background-image: linear-gradient(rgba(156, 163, 175, 0.2) 1px, transparent 1px), linear-gradient(90deg, rgba(156, 163, 175, 0.2) 1px, transparent 1px); background-size: 20px 20px; }
+        .dark .bg-pattern-grid { background-image: linear-gradient(rgba(82, 82, 91, 0.3) 1px, transparent 1px), linear-gradient(90deg, rgba(82, 82, 91, 0.3) 1px, transparent 1px); }
+        .bg-pattern-ripples { background-image: repeating-radial-gradient(circle at 0 0, transparent 0, transparent 10px, rgba(156, 163, 175, 0.1) 10px, rgba(156, 163, 175, 0.1) 20px); }
+        .dark .bg-pattern-ripples { background-image: repeating-radial-gradient(circle at 0 0, transparent 0, transparent 10px, rgba(82, 82, 91, 0.2) 10px, rgba(82, 82, 91, 0.2) 20px); }
+        .bg-pattern-diamonds { background-image: linear-gradient(135deg, rgba(156,163,175,0.1) 25%, transparent 25%), linear-gradient(225deg, rgba(156,163,175,0.1) 25%, transparent 25%), linear-gradient(45deg, rgba(156,163,175,0.1) 25%, transparent 25%), linear-gradient(315deg, rgba(156,163,175,0.1) 25%, transparent 25%); background-position: 10px 0, 10px 0, 0 0, 0 0; background-size: 20px 20px; }
+        .dark .bg-pattern-diamonds { background-image: linear-gradient(135deg, rgba(82,82,91,0.2) 25%, transparent 25%), linear-gradient(225deg, rgba(82,82,91,0.2) 25%, transparent 25%), linear-gradient(45deg, rgba(82,82,91,0.2) 25%, transparent 25%), linear-gradient(315deg, rgba(82,82,91,0.2) 25%, transparent 25%); background-position: 10px 0, 10px 0, 0 0, 0 0; background-size: 20px 20px; }
+        .read-only-active .admin-only { display: none !important; }
+    </style>
+
+    {% if vehicle_data %}
+    <style>
+        :root { --accent: {{ vehicle_data.theme_color }}; }
+        .bg-accent { background-color: var(--accent); color: #fff; }
+        .bg-accent:hover { filter: brightness(0.85); }
+        .text-accent { color: var(--accent); }
+        .border-accent { border-color: var(--accent); }
+        .focus-ring-accent:focus { outline: none; box-shadow: 0 0 0 2px var(--accent); }
+    </style>
+    {% endif %}
+
+    <script>
+        if ('serviceWorker' in navigator) navigator.serviceWorker.register('{{ ingress_path }}/sw.js');
+        try { if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) document.documentElement.classList.add('dark'); } catch(e) {}
+
+        function toggleDarkMode() {
+            document.documentElement.classList.toggle('dark');
+            try { localStorage.setItem('theme', document.documentElement.classList.contains('dark') ? 'dark' : 'light'); } catch(e) {}
+        }
+
+        function toggleReadOnly() {
+            document.body.classList.toggle('read-only-active');
+            const isLocked = document.body.classList.contains('read-only-active');
+            document.getElementById('lock-icon').innerText = isLocked ? "🔒 Dashboard Locked" : "🔓 Dashboard Unlocked";
+            try { localStorage.setItem('fleetReadOnly', isLocked); } catch(e) {}
+        }
+
+        function toggleSettingsModal() { document.getElementById('global-settings-modal').classList.toggle('hidden'); }
+
+        let modalVin = '';
+        let modalServiceId = '';
+
+        function openServiceDetails(s, vin, isAdmin) {
+            modalVin = vin;
+            modalServiceId = s.id;
+            document.getElementById('sd-name').innerText = s.name;
+            document.getElementById('sd-category').innerText = s.category;
+            
+            let last_fmt = s.last_service_date_formatted && s.last_service_date_formatted !== "None" ? `${s.last_service_date_formatted} <span class="text-gray-400 mx-1">|</span> ${s.last_service_miles} {{ global_settings.unit }}` : "Never Logged";
+            let due_fmt = s.due_date_str && s.due_date_str !== "TBD" ? `${s.due_date_str} <span class="text-gray-400 mx-1">|</span> ${s.due_miles} {{ global_settings.unit }}` : "TBD";
+            let rem_fmt = s.miles_remaining && s.miles_remaining !== "N/A" ? `${s.miles_remaining} {{ global_settings.unit }} <span class="text-gray-400 mx-1">|</span> ${s.months_remaining} mo` : "Log service to track";
+            
+            document.getElementById('sd-last').innerHTML = last_fmt;
+            document.getElementById('sd-due').innerHTML = due_fmt;
+            document.getElementById('sd-remain').innerHTML = rem_fmt;
+            document.getElementById('sd-status').innerText = s.status || "Unknown";
+            
+            renderGarageLists(s, isAdmin);
+
+            if (isAdmin) {
+                document.getElementById('sd-add-part-form').action = `{{ ingress_path }}/api/${vin}/service/${s.id}/add_garage_item`;
+                document.getElementById('sd-add-torque-form').action = `{{ ingress_path }}/api/${vin}/add_torque`;
+                document.getElementById('sd-torque-labels').value = s.name;
+                document.getElementById('btn-toggle-part').classList.remove('hidden');
+                document.getElementById('btn-toggle-torque').classList.remove('hidden');
+            } else {
+                document.getElementById('btn-toggle-part').classList.add('hidden');
+                document.getElementById('btn-toggle-torque').classList.add('hidden');
+                document.getElementById('sd-add-part-form').classList.add('hidden');
+                document.getElementById('sd-add-torque-form').classList.add('hidden');
+            }
+
+            document.getElementById('service-details-modal').classList.remove('hidden');
+        }
+
+        function renderGarageLists(s, isAdmin) {
+            let partsHtml = '';
+            if (s.garage_parts && s.garage_parts.length > 0) {
+                s.garage_parts.forEach(p => {
+                    partsHtml += `<div id="part-${p.id}" class="flex justify-between items-center py-1 border-b border-gray-100 dark:border-zinc-800 last:border-0"><span class="text-gray-600 dark:text-zinc-300 text-xs">${p.name}</span><div class="flex items-center"><span class="font-bold text-gray-800 dark:text-gray-200 text-xs">${p.value}</span>${isAdmin ? `<button type="button" onclick="deleteGarageItem(this, '${p.id}', 'part')" class="ml-3 text-red-400 hover:text-red-600 text-xs">✕</button>` : ''}</div></div>`;
+                });
+            } else { partsHtml = '<p class="text-[10px] text-gray-400 italic py-1 no-data">No custom parts linked.</p>'; }
+            document.getElementById('sd-parts-list').innerHTML = partsHtml;
+            
+            let autoTorques = [];
+            try {
+                const globalTorques = JSON.parse(document.getElementById('global-torque-data').textContent);
+                const sNameLower = s.name.toLowerCase();
+                autoTorques = globalTorques.filter(t => {
+                    if (!t.labels) return false;
+                    return t.labels.toLowerCase().split(',').map(l => l.trim()).some(l => sNameLower.includes(l));
+                });
+            } catch(e) {}
+
+            let torqueHtml = '';
+            const combinedTorques = [...(s.garage_torque || []), ...autoTorques];
+            const seen = new Set();
+            const uniqueTorques = combinedTorques.filter(t => {
+                const name = t.name || t.component;
+                if(seen.has(name)) return false;
+                seen.add(name); return true;
+            });
+
+            if (uniqueTorques.length > 0) {
+                uniqueTorques.forEach(t => {
+                    const name = t.name || t.component;
+                    const val = t.value || t.torque;
+                    const isGlobal = !!t.component;
+                    const delBtn = (isAdmin && !isGlobal) ? `<button type="button" onclick="deleteGarageItem(this, '${t.id}', 'torque')" class="ml-3 text-red-400 hover:text-red-600 text-xs">✕</button>` : (isGlobal ? '<span class="ml-3 text-[10px] text-gray-400 font-normal italic" title="Auto-linked from Global Specs">(Auto)</span>' : '');
+                    torqueHtml += `<div id="torque-${t.id}" class="flex justify-between items-center py-1 border-b border-gray-100 dark:border-zinc-800 last:border-0"><span class="text-gray-600 dark:text-zinc-300 text-xs">${name}</span><div class="flex items-center"><span class="font-bold text-accent text-xs">${val}</span>${delBtn}</div></div>`;
+                });
+            } else { torqueHtml = '<p class="text-[10px] text-gray-400 italic py-1 no-data">No torque specs linked.</p>'; }
+            document.getElementById('sd-torque-list').innerHTML = torqueHtml;
+        }
+
+        async function submitGaragePart(e) {
+            e.preventDefault();
+            const form = e.target;
+            const formData = new FormData(form);
+            const res = await fetch(form.action, { method: 'POST', body: formData, headers: { 'Accept': 'application/json' }});
+            const data = await res.json();
+            if(data.status === 'success') {
+                const html = `<div id="part-${data.id}" class="flex justify-between items-center py-1 border-b border-gray-100 dark:border-zinc-800 last:border-0"><span class="text-gray-600 dark:text-zinc-300 text-xs">${formData.get('name')}</span><div class="flex items-center"><span class="font-bold text-gray-800 dark:text-gray-200 text-xs">${formData.get('value')}</span><button type="button" onclick="deleteGarageItem(this, '${data.id}', 'part')" class="ml-3 text-red-400 hover:text-red-600 text-xs">✕</button></div></div>`;
+                const list = document.getElementById('sd-parts-list');
+                const noData = list.querySelector('.no-data'); if(noData) noData.remove();
+                list.insertAdjacentHTML('beforeend', html);
+                form.reset(); form.classList.add('hidden');
+            }
+        }
+
+        async function submitGarageTorque(e) {
+            e.preventDefault();
+            const form = e.target;
+            const formData = new FormData(form);
+            const res = await fetch(form.action, { method: 'POST', body: formData, headers: { 'Accept': 'application/json' }});
+            const data = await res.json();
+            if(data.status === 'success') {
+                const html = `<div id="torque-${data.id}" class="flex justify-between items-center py-1 border-b border-gray-100 dark:border-zinc-800 last:border-0"><span class="text-gray-600 dark:text-zinc-300 text-xs">${formData.get('component')}</span><div class="flex items-center"><span class="font-bold text-accent text-xs">${formData.get('torque')}</span><span class="ml-3 text-[10px] text-gray-400 font-normal italic">(Auto)</span></div></div>`;
+                const list = document.getElementById('sd-torque-list');
+                const noData = list.querySelector('.no-data'); if(noData) noData.remove();
+                list.insertAdjacentHTML('beforeend', html);
+                form.reset(); form.classList.add('hidden');
+                
+                try {
+                    const gt = JSON.parse(document.getElementById('global-torque-data').textContent);
+                    gt.push({ id: data.id, component: formData.get('component'), torque: formData.get('torque'), labels: formData.get('labels')});
+                    document.getElementById('global-torque-data').textContent = JSON.stringify(gt);
+                } catch(err) {}
+            }
+        }
+
+        async function deleteGarageItem(btn, itemId, type) {
+            if(!confirm('Delete this item?')) return;
+            const res = await fetch(`{{ ingress_path }}/api/${modalVin}/service/${modalServiceId}/delete_garage_item/${type}/${itemId}`, { method: 'POST', headers: { 'Accept': 'application/json' }});
+            if((await res.json()).status === 'success') document.getElementById(`${type}-${itemId}`).remove();
+        }
+
+        async function deleteGlobalTorque(btn, torqueId) {
+            if(!confirm('Permanently delete this torque spec?')) return;
+            const res = await fetch(`{{ ingress_path }}/api/${modalVin}/delete_torque/${torqueId}`, { method: 'POST', headers: { 'Accept': 'application/json' }});
+            if((await res.json()).status === 'success') document.getElementById(`torque-${torqueId}`).remove();
+        }
+        
+        function closeServiceDetails() { document.getElementById('service-details-modal').classList.add('hidden'); }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            try {
+                const savedTexture = localStorage.getItem('fleetBgTexture') || 'bg-pattern-solid';
+                document.body.classList.add(savedTexture);
+                if (document.getElementById('texture-selector')) document.getElementById('texture-selector').value = savedTexture;
+                if (localStorage.getItem('fleetReadOnly') === 'true') toggleReadOnly();
+            } catch(e) {}
+        });
+
+        function changeTexture(texture) {
+            document.body.classList.remove('bg-pattern-solid', 'bg-pattern-dots', 'bg-pattern-grid', 'bg-pattern-ripples', 'bg-pattern-diamonds');
+            document.body.classList.add(texture);
+            try { localStorage.setItem('fleetBgTexture', texture); } catch(e) {}
+        }
+
+        function showTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.tab-btn').forEach(el => {
+                el.classList.remove('border-accent', 'text-accent');
+                el.classList.add('border-transparent', 'text-gray-500', 'dark:text-zinc-400');
+            });
+            const content = document.getElementById(tabId);
+            if (content) {
+                content.classList.remove('hidden');
+                if (tabId !== 'add-vehicle') try { localStorage.setItem('fleetActiveTab', tabId); } catch(e) {}
+            }
+            const btn = document.getElementById('btn-' + tabId);
+            if (btn) {
+                btn.classList.remove('border-transparent', 'text-gray-500', 'dark:text-zinc-400');
+                btn.classList.add('border-accent', 'text-accent');
+            }
+        }
+
+        function toggleVehicleSettings() {
+            document.getElementById('settings-view').classList.toggle('hidden');
+            document.getElementById('settings-edit').classList.toggle('hidden');
+        }
+
+        function toggleEdit(type, id) {
+            document.getElementById('view-' + type + '-' + id).classList.toggle('hidden');
+            const editEl = document.getElementById('edit-' + type + '-' + id);
+            editEl.classList.toggle('hidden');
+            editEl.classList.toggle('flex');
+        }
+
+        function toggleDropdown(event) {
+            if(event) event.stopPropagation();
+            document.getElementById('vehicleDropdown').classList.toggle('hidden');
+        }
+
+        document.addEventListener('click', function(event) {
+            const dropdown = document.getElementById('vehicleDropdown');
+            if (dropdown && !dropdown.classList.contains('hidden') && !dropdown.contains(event.target) && !document.getElementById('vehicleDropdownBtn').contains(event.target)) dropdown.classList.add('hidden');
+        });
+
+        function filterAndSortSummary() {
+            const searchText = document.getElementById('search-service').value.toLowerCase();
+            const statusFilter = document.getElementById('filter-status').value;
+            const sortType = document.getElementById('sort-status').value;
+            const container = document.getElementById('summary-grid');
+            
+            let cards = Array.from(container.querySelectorAll('.service-card'));
+            
+            cards.forEach(card => {
+                const name = card.getAttribute('data-name');
+                const status = card.getAttribute('data-status');
+                const matchesSearch = name.includes(searchText);
+                let matchesStatus = (statusFilter === 'all' || (statusFilter === 'problems' && (status === 'Past Due' || status === 'Coming Up')) || status === statusFilter);
+                card.style.display = (matchesSearch && matchesStatus) ? 'flex' : 'none'; 
+            });
+
+            cards.sort((a, b) => {
+                if (sortType === 'alpha') return a.dataset.name.localeCompare(b.dataset.name);
+                return a.dataset.priority - b.dataset.priority;
+            });
+            
+            cards.forEach(card => container.appendChild(card));
+        }
+
+        async function runVinDecode() {
+            const vin = document.getElementById('new_vin').value;
+            if(!vin) return alert("Enter a VIN first!");
+            const btn = document.getElementById('decode_btn');
+            btn.innerText = "Decoding...";
+            try {
+                const res = await fetch('{{ ingress_path }}/api/decode_vin/' + vin);
+                const data = await res.json();
+                document.getElementById('new_make').value = data.make || '';
+                document.getElementById('new_model').value = data.model || '';
+                document.getElementById('new_year').value = data.year || '';
+            } catch (e) { alert("Could not decode VIN."); }
+            btn.innerText = "Decode VIN";
+        }
+
+        function copyGuestLink(token) {
+            const fullLink = window.location.origin + '{{ ingress_path }}/share/' + token;
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(fullLink).then(() => { alert('Guest link copied to clipboard!'); }).catch(err => { prompt("Please copy the link below:", fullLink); });
+            } else {
+                let textArea = document.createElement("textarea");
+                textArea.value = fullLink;
+                textArea.style.position = "fixed"; textArea.style.left = "-999999px";
+                document.body.appendChild(textArea);
+                textArea.focus(); textArea.select();
+                try { document.execCommand('copy'); alert('Guest link copied to clipboard!'); } catch (err) { prompt("Please copy the link manually:", fullLink); }
+                textArea.remove();
+            }
+        }
+
+// ==========================================
+        // PHASE 4: THE NEW, SMART AI PROMPT GENERATOR (WITH HTTP FALLBACK)
+        // ==========================================
+        function copyPrompt(type) {
+            let promptText = "";
+            
+            // 1. Secretly scrape your database vocabulary
+            const servicesList = JSON.parse('{{ vehicle_data.services | map(attribute="name") | list | tojson | safe if vehicle_data else "[]" }}');
+            const servicesStr = servicesList.length > 0 ? servicesList.join(', ') : "None currently configured";
+
+            // 2. The universal fail-safe rule
+            const fallbackRule = "\n\nCRITICAL RULE: If you find maintenance records or torque specs that do not perfectly match the exact service names provided above, STOP. Do not force it to match. Instead, leave the service name/label blank in the CSV. Then, at the end of your response outside the CSV code block, list the unmatched items and ask the user exactly this: 'I found these unmatched tasks. Should I create new service categories for them? You can choose All, Some, or None.'";
+
+            // 3. Assemble the context-aware prompt
+            if (type === 'interval') {
+                promptText = "Extract maintenance intervals into CSV code block. Columns must be exactly: Category, Service, Interval_Months, Interval_Miles.";
+            } else if (type === 'logbook') {
+                promptText = `Format this maintenance history into a CSV code block. Columns must be exactly: Date, Service, Mileage, Notes, Parts, Labor. Format Date: YYYY-MM-DD. \n\nYou MUST map past maintenance to these exact service names: [${servicesStr}].` + fallbackRule;
+            } else if (type === 'torque') {
+                promptText = `Extract torque specifications from the following text into a CSV code block. Columns must be exactly: Component, Torque, Labels. \n\nWhen assigning a 'Label' to auto-link it to a job, you MUST use exact matches from this list: [${servicesStr}].` + fallbackRule;
+            }
+
+            // 4. Success UI Helper
+            const btn = document.getElementById('copy_btn_' + type);
+            const originalText = btn ? btn.innerText : "";
+            function showSuccess() {
+                if(btn) {
+                    btn.innerText = "✅ Copied!";
+                    setTimeout(() => btn.innerText = originalText, 2000);
+                } else { alert('AI Prompt Copied!'); }
+            }
+
+            // 5. Send to clipboard (Secure vs HTTP Fallback)
+            if (navigator.clipboard && window.isSecureContext) {
+                // Secure HTTPS Context
+                navigator.clipboard.writeText(promptText)
+                    .then(showSuccess)
+                    .catch(() => alert('Browser blocked clipboard. Please copy manually.'));
+            } else {
+                // HTTP / Local Network Fallback Method
+                let textArea = document.createElement("textarea");
+                textArea.value = promptText;
+                textArea.style.position = "fixed"; 
+                textArea.style.left = "-999999px";
+                document.body.appendChild(textArea);
+                textArea.focus(); 
+                textArea.select();
+                try { 
+                    document.execCommand('copy'); 
+                    showSuccess();
+                } catch (err) { 
+                    alert('Browser blocked clipboard. Please copy manually.'); 
+                }
+                textArea.remove();
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-100 dark:bg-zinc-950 text-gray-800 dark:text-gray-200 p-4 font-sans transition-colors duration-200">
+
+    {% block content %}{% endblock %}
+
+</body>
+</html>

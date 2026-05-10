@@ -1,0 +1,91 @@
+<div id="timeline" class="tab-content hidden">
+    <div class="flex flex-col md:flex-row justify-between items-end mb-6 gap-4">
+        <div>
+            <h3 class="text-2xl font-bold text-gray-800 dark:text-white mb-1">Maintenance Timeline</h3>
+            <p class="text-sm text-gray-500 dark:text-zinc-400">Project upcoming services over the life of the vehicle.</p>
+        </div>
+        
+        <div class="flex gap-3 bg-gray-50 dark:bg-zinc-800/50 p-2 rounded-lg border border-gray-200 dark:border-zinc-700 shadow-sm w-full md:w-auto">
+            <div>
+                <label class="block text-[10px] font-bold text-gray-500 uppercase">Step Size ({{ global_settings.unit }})</label>
+                <select id="timeline-step" onchange="renderTimeline()" class="bg-white dark:bg-zinc-900 border border-gray-300 dark:border-zinc-700 text-sm rounded px-2 py-1 focus-ring-accent outline-none">
+                    <option value="5000">5,000</option>
+                    <option value="10000" selected>10,000</option>
+                    <option value="25000">25,000</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-[10px] font-bold text-gray-500 uppercase">Projection ({{ global_settings.unit }})</label>
+                <select id="timeline-horizon" onchange="renderTimeline()" class="bg-white dark:bg-zinc-900 border border-gray-300 dark:border-zinc-700 text-sm rounded px-2 py-1 focus-ring-accent outline-none">
+                    <option value="50000">50,000</option>
+                    <option value="100000" selected>100,000</option>
+                    <option value="200000">200,000</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <div class="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-xl shadow-sm relative w-full">
+        <div id="timeline-render-zone" class="w-full"></div>
+    </div>
+</div>
+
+<script id="timeline-vdata" type="application/json">{{ vehicle_data | tojson | safe }}</script>
+<div id="timeline-unit" data-unit="{{ global_settings.unit }}" class="hidden"></div>
+
+<script>
+    function renderTimeline() {
+        const step = parseInt(document.getElementById('timeline-step').value) || 10000;
+        const horizonMiles = parseInt(document.getElementById('timeline-horizon').value) || 100000;
+        
+        const vData = JSON.parse(document.getElementById('timeline-vdata').textContent);
+        const unit = document.getElementById('timeline-unit').dataset.unit || 'mi';
+        
+        const currentM = vData.current_mileage || 0;
+        
+        let startColumn = Math.ceil(currentM / step) * step;
+        if (startColumn === currentM) startColumn += step; 
+
+        const cols = [];
+        for (let m = startColumn; m <= currentM + horizonMiles; m += step) { cols.push(m); }
+
+        let html = '<div class="overflow-x-auto rounded-xl"><table class="w-full text-sm text-left border-collapse">';
+        html += '<thead><tr><th class="p-3 sticky left-0 bg-white dark:bg-zinc-900 z-20 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Service</th>';
+        
+        cols.forEach(col => {
+            html += `<th class="p-3 border-b border-l border-gray-100 dark:border-zinc-800 font-bold text-gray-500 text-center whitespace-nowrap">${(col/1000).toFixed(0)}k</th>`;
+        });
+        html += '</tr></thead><tbody>';
+
+        vData.services.forEach(s => {
+            html += `<tr><td class="p-3 sticky left-0 bg-white dark:bg-zinc-900 z-10 font-bold border-b border-gray-100 dark:border-zinc-800 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] whitespace-nowrap text-gray-800 dark:text-gray-200">${s.name}</td>`;
+            
+            let lastM = s.last_service_miles !== null ? s.last_service_miles : currentM;
+            let interval = s.interval_miles;
+            
+            cols.forEach(col => {
+                let cellHtml = '';
+                if(interval > 0) {
+                    let bucketStart = col - step;
+                    let bucketEnd = col;
+                    
+                    let nextDue = lastM + interval;
+                    while(nextDue <= bucketEnd) {
+                        if (nextDue > bucketStart && nextDue <= bucketEnd) {
+                            cellHtml = `<div class="w-4 h-4 bg-accent rounded shadow-sm mx-auto opacity-90 transition hover:scale-125" title="Due around ${nextDue.toLocaleString()} ${unit}"></div>`;
+                            break;
+                        }
+                        nextDue += interval;
+                    }
+                }
+                html += `<td class="p-2 border-b border-l border-gray-100 dark:border-zinc-800 text-center bg-gray-50/30 dark:bg-zinc-800/10 hover:bg-gray-100 dark:hover:bg-zinc-800 transition">${cellHtml}</td>`;
+            });
+            html += '</tr>';
+        });
+
+        html += '</tbody></table></div>';
+        document.getElementById('timeline-render-zone').innerHTML = html;
+    }
+
+    document.addEventListener('DOMContentLoaded', renderTimeline);
+</script>

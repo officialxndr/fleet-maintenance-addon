@@ -1,0 +1,60 @@
+<div id="add-vehicle" class="{% if vehicle_data %}hidden tab-content{% else %}block{% endif %} w-full md:w-3/4 max-w-4xl mx-auto bg-gray-50 dark:bg-zinc-900 p-8 rounded-xl border dark:border-zinc-800 mt-8 relative z-0 admin-only">
+    <h2 class="text-2xl font-bold mb-2 text-gray-800 dark:text-white">Add a New Vehicle</h2>
+    <form action="{{ ingress_path }}/api/add_vehicle" method="POST" enctype="multipart/form-data" class="space-y-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div><label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1 uppercase tracking-wide">VIN Number</label><div class="flex gap-2"><input type="text" id="new_vin" name="vin" required class="text-sm border dark:border-zinc-700 rounded-lg p-2.5 w-full uppercase bg-white dark:bg-zinc-800 dark:text-white focus-ring-accent"><button type="button" id="decode_btn" onclick="runVinDecode()" class="bg-gray-800 dark:bg-zinc-700 text-white font-medium text-sm px-4 rounded-lg transition hover:bg-gray-900">Decode</button></div></div>
+            <div><label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1 uppercase tracking-wide">Nickname (Optional)</label><input type="text" name="nickname" placeholder="e.g. My Daily Driver" class="text-sm border dark:border-zinc-700 rounded-lg p-2.5 w-full bg-white dark:bg-zinc-800 dark:text-white focus-ring-accent"></div>
+        </div>
+        <div class="grid grid-cols-3 gap-4">
+            <div><label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1 uppercase tracking-wide">Year</label><input type="number" id="new_year" name="year" required class="text-sm border dark:border-zinc-700 rounded-lg p-2.5 w-full bg-white dark:bg-zinc-800 dark:text-white focus-ring-accent"></div>
+            <div><label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1 uppercase tracking-wide">Make</label><input type="text" id="new_make" name="make" required class="text-sm border dark:border-zinc-700 rounded-lg p-2.5 w-full bg-white dark:bg-zinc-800 dark:text-white focus-ring-accent"></div>
+            <div><label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1 uppercase tracking-wide">Model</label><input type="text" id="new_model" name="model" required class="text-sm border dark:border-zinc-700 rounded-lg p-2.5 w-full bg-white dark:bg-zinc-800 dark:text-white focus-ring-accent"></div>
+        </div>
+        <div><label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1 uppercase tracking-wide">Current Mileage</label><div class="flex items-center gap-1.5 w-full"><input type="number" name="mileage" required class="text-sm border dark:border-zinc-700 rounded-lg p-2.5 w-full bg-white dark:bg-zinc-800 dark:text-white focus-ring-accent"><span class="text-xs text-gray-500 dark:text-zinc-400 font-medium">{{ global_settings.unit }}</span></div></div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-gray-200 dark:border-zinc-700 mt-4">
+            <div>
+                <p class="text-sm font-bold text-gray-800 dark:text-gray-200 mb-2">Integrations</p>
+                <div class="space-y-3">
+                    <div><label class="block text-[10px] text-gray-500 dark:text-zinc-400 uppercase font-bold mb-1">HA Entity ID (Optional)</label><input list="ha-sensors-list-add" name="ha_entity_id" class="w-full text-sm border dark:border-zinc-700 rounded-lg p-2 bg-white dark:bg-zinc-800 dark:text-white focus-ring-accent"><datalist id="ha-sensors-list-add">{% for sensor in ha_sensors %}<option value="{{ sensor.id }}">{{ sensor.name }}</option>{% endfor %}</datalist></div>
+                    <div><label class="block text-[10px] text-gray-500 dark:text-zinc-400 uppercase font-bold mb-1">Vehicle Image URL (Optional)</label><input type="text" name="image_url" class="w-full text-sm border dark:border-zinc-700 rounded-lg p-2 bg-white dark:bg-zinc-800 dark:text-white focus-ring-accent"></div>
+                </div>
+            </div>
+            <div>
+                <p class="text-sm font-bold text-gray-800 dark:text-gray-200 mb-2">Starting Intervals (Optional)</p>
+                <p class="text-[11px] leading-tight text-gray-500 dark:text-zinc-400 mb-3">By default, this vehicle will pull from the Baseline Template below. You can override it for just this car by uploading a CSV.</p>
+                <div class="space-y-3">
+                    <input type="file" name="csv_file" accept=".csv" class="text-sm border dark:border-zinc-700 rounded-lg p-1.5 w-full bg-white dark:bg-zinc-800 dark:text-gray-300 focus-ring-accent cursor-pointer">
+                    <label class="flex items-start gap-2 text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer group"><input type="checkbox" name="update_baseline" value="yes" class="w-4 h-4 mt-0.5 rounded text-accent focus-ring-accent bg-white dark:bg-zinc-800 border-gray-300 dark:border-zinc-600"><span class="group-hover:text-accent transition leading-tight text-[12px]">Also save this CSV as the new App-Wide Baseline Template.</span></label>
+                </div>
+            </div>
+        </div>
+        <button type="submit" class="w-full bg-accent text-white font-bold py-3 px-4 rounded-lg mt-6 shadow-md transition transform hover:-translate-y-0.5">Save Vehicle</button>
+    </form>
+
+    <div class="mt-10 pt-6 border-t border-gray-200 dark:border-zinc-800">
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-end mb-4 gap-4">
+            <div><h3 class="text-lg font-bold text-gray-800 dark:text-white mb-1">Baseline Template</h3><p class="text-xs text-gray-500 dark:text-zinc-400">These intervals are automatically applied when you add a new vehicle without a CSV.</p></div>
+            <form action="{{ ingress_path }}/api/import_baseline_csv" method="POST" enctype="multipart/form-data" class="flex gap-2 items-center border border-gray-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 p-1 rounded shadow-sm w-full md:w-auto"><input type="file" name="csv_file" accept=".csv" required class="text-xs w-full md:w-48 p-1 dark:text-gray-300"><button type="submit" class="bg-gray-800 dark:bg-zinc-700 hover:bg-gray-900 text-white text-xs py-1.5 px-3 rounded shadow font-medium transition whitespace-nowrap">Upload CSV</button></form>
+        </div>
+        <div class="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-lg p-4 mb-4 shadow-sm">
+            <form action="{{ ingress_path }}/api/add_default" method="POST" class="flex flex-col md:flex-row flex-wrap gap-3 items-end">
+                <div class="flex-1 w-full min-w-[120px]"><label class="block text-[10px] text-gray-500 font-bold uppercase mb-1">Category</label><input type="text" name="category" placeholder="e.g. Engine" required class="text-sm border dark:border-zinc-700 rounded p-2 w-full bg-gray-50 dark:bg-zinc-800 dark:text-white focus-ring-accent"></div>
+                <div class="flex-1 w-full min-w-[150px]"><label class="block text-[10px] text-gray-500 font-bold uppercase mb-1">Service Name</label><input type="text" name="name" placeholder="e.g. Filter" required class="text-sm border dark:border-zinc-700 rounded p-2 w-full bg-gray-50 dark:bg-zinc-800 dark:text-white focus-ring-accent"></div>
+                <div class="flex-1 w-full min-w-[150px]"><label class="block text-[10px] text-gray-500 font-bold uppercase mb-1">Required Parts / Notes</label><input type="text" name="parts_info" placeholder="e.g. 5.5Qts 5W-30" class="text-sm border dark:border-zinc-700 rounded p-2 w-full bg-gray-50 dark:bg-zinc-800 dark:text-white focus-ring-accent"></div>
+                <div class="w-full md:w-24"><label class="block text-[10px] text-gray-500 font-bold uppercase mb-1">Months</label><input type="number" name="interval_months" required class="text-sm border dark:border-zinc-700 rounded p-2 w-full text-center bg-gray-50 dark:bg-zinc-800 dark:text-white focus-ring-accent"></div>
+                <div class="w-full md:w-24"><label class="block text-[10px] text-gray-500 font-bold uppercase mb-1">{{ 'Kilometers' if global_settings.unit == 'km' else 'Miles' }}</label><input type="number" name="interval_miles" required class="text-sm border dark:border-zinc-700 rounded p-2 w-full text-center bg-gray-50 dark:bg-zinc-800 dark:text-white focus-ring-accent"></div>
+                <button type="submit" class="bg-gray-800 dark:bg-zinc-700 hover:bg-gray-900 text-white font-medium text-sm py-2 px-4 rounded shadow h-[38px] w-full md:w-auto">+ Add</button>
+            </form>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-96 overflow-y-auto pr-1">
+            {% if default_services %}
+                {% for s in default_services %}
+                <div class="flex justify-between items-center bg-white dark:bg-zinc-800 p-3 rounded-lg border border-gray-200 dark:border-zinc-700 shadow-sm">
+                    <div class="overflow-hidden"><p class="text-[10px] text-gray-500 dark:text-zinc-400 uppercase font-bold tracking-wide truncate">{{ s.category }}</p><p class="text-sm font-bold text-gray-800 dark:text-gray-100 truncate">{{ s.name }}</p><p class="text-xs text-accent mt-0.5 font-medium">{{ s.interval_months }} mo <span class="text-gray-300 dark:text-zinc-600 mx-0.5">|</span> {{ "{:,}".format(s.interval_miles) }} {{ global_settings.unit }}</p></div>
+                    <form action="{{ ingress_path }}/api/delete_default/{{ s.id }}" method="POST" onsubmit="return confirm('Remove default?');"><button type="submit" class="text-red-500 hover:text-red-700 bg-red-50 dark:bg-red-900/20 p-2 rounded-md transition" title="Delete Default">🗑️</button></form>
+                </div>
+                {% endfor %}
+            {% endif %}
+        </div>
+    </div>
+</div>

@@ -1,0 +1,84 @@
+<div id="specs" class="tab-content hidden">
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 border-b border-gray-200 dark:border-zinc-800 pb-4">
+        <div><h3 class="text-2xl font-bold text-gray-800 dark:text-white">Glovebox & Specs</h3><p class="text-sm text-gray-500 dark:text-zinc-400">Store part numbers, capacities, and manuals here so you never have to search for them again.</p></div>
+        <button onclick="toggleEdit('specs', 'main')" class="bg-accent text-white font-bold py-2 px-6 rounded-lg shadow-md hover:brightness-90 transition mt-4 md:mt-0 admin-only">Edit Specs</button>
+    </div>
+
+    <div id="view-specs-main" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+        <div class="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 p-5 rounded-xl shadow-sm relative overflow-hidden"><div class="absolute top-0 right-0 w-16 h-16 bg-gray-50 dark:bg-zinc-800 rounded-bl-full flex items-start justify-end p-3"><span class="text-2xl opacity-50">🛢️</span></div><h4 class="font-bold text-gray-800 dark:text-gray-200 mb-4 border-b border-gray-100 dark:border-zinc-800 pb-2">Engine & Fluids</h4><div class="space-y-3"><div><p class="text-[10px] uppercase font-bold text-gray-400 dark:text-zinc-500">Engine Oil Type / Capacity</p><p class="font-medium text-gray-800 dark:text-gray-200">{{ vehicle_data.specs.engine_oil or 'Not specified' }}</p></div><div><p class="text-[10px] uppercase font-bold text-gray-400 dark:text-zinc-500">Oil Filter Part #</p><p class="font-medium text-gray-800 dark:text-gray-200">{{ vehicle_data.specs.oil_filter or 'Not specified' }}</p></div></div></div>
+        <div class="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 p-5 rounded-xl shadow-sm relative overflow-hidden"><div class="absolute top-0 right-0 w-16 h-16 bg-gray-50 dark:bg-zinc-800 rounded-bl-full flex items-start justify-end p-3"><span class="text-2xl opacity-50">🛞</span></div><h4 class="font-bold text-gray-800 dark:text-gray-200 mb-4 border-b border-gray-100 dark:border-zinc-800 pb-2">Wheels & Tires</h4><div class="space-y-3"><div><p class="text-[10px] uppercase font-bold text-gray-400 dark:text-zinc-500">Tire Size</p><p class="font-medium text-gray-800 dark:text-gray-200">{{ vehicle_data.specs.tire_size or 'Not specified' }}</p></div><div><p class="text-[10px] uppercase font-bold text-gray-400 dark:text-zinc-500">Target Pressure (PSI)</p><p class="font-medium text-gray-800 dark:text-gray-200">{{ vehicle_data.specs.tire_pressure or 'Not specified' }}</p></div></div></div>
+        <div class="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 p-5 rounded-xl shadow-sm relative overflow-hidden"><div class="absolute top-0 right-0 w-16 h-16 bg-gray-50 dark:bg-zinc-800 rounded-bl-full flex items-start justify-end p-3"><span class="text-2xl opacity-50">📖</span></div><h4 class="font-bold text-gray-800 dark:text-gray-200 mb-4 border-b border-gray-100 dark:border-zinc-800 pb-2">Documentation & Electrical</h4><div class="space-y-3"><div><p class="text-[10px] uppercase font-bold text-gray-400 dark:text-zinc-500">Wiper Blade Sizes</p><p class="font-medium text-gray-800 dark:text-gray-200">{{ vehicle_data.specs.wiper_blades or 'Not specified' }}</p></div><div><p class="text-[10px] uppercase font-bold text-gray-400 dark:text-zinc-500">Battery Install Date</p><p class="font-medium text-gray-800 dark:text-gray-200">{{ vehicle_data.specs.battery_date | format_date(global_settings.date_format) if vehicle_data.specs.battery_date else 'Not specified' }}</p></div><div><p class="text-[10px] uppercase font-bold text-gray-400 dark:text-zinc-500">Owner's Manual</p>{% if vehicle_data.specs.manual_url %}<a href="{{ vehicle_data.specs.manual_url }}" target="_blank" class="text-accent hover:underline font-bold inline-block mt-1">🔗 View Digital Manual</a>{% else %}<p class="font-medium text-gray-800 dark:text-gray-200">Not linked</p>{% endif %}</div></div></div>
+    </div>
+
+    <form id="edit-specs-main" action="{{ ingress_path }}/api/{{ current_vin }}/update_specs" method="POST" class="hidden flex-col gap-6 bg-gray-50 dark:bg-zinc-800/50 p-6 rounded-xl border border-gray-200 dark:border-zinc-700 shadow-inner admin-only mb-8">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div class="space-y-4"><h4 class="font-bold text-gray-800 dark:text-gray-200 border-b border-gray-200 dark:border-zinc-700 pb-2">Engine & Fluids</h4><div><label class="block text-[10px] uppercase font-bold text-gray-500 dark:text-zinc-400 mb-1">Oil Type & Capacity</label><input type="text" name="engine_oil" value="{{ vehicle_data.specs.engine_oil }}" placeholder="e.g. 5W-30 Full Synthetic (5.5 Qts)" class="w-full text-sm border dark:border-zinc-600 rounded p-2 bg-white dark:bg-zinc-900 dark:text-white focus-ring-accent"></div><div><label class="block text-[10px] uppercase font-bold text-gray-500 dark:text-zinc-400 mb-1">Oil Filter Part #</label><input type="text" name="oil_filter" value="{{ vehicle_data.specs.oil_filter }}" placeholder="e.g. K&N HP-1002" class="w-full text-sm border dark:border-zinc-600 rounded p-2 bg-white dark:bg-zinc-900 dark:text-white focus-ring-accent"></div></div>
+            <div class="space-y-4"><h4 class="font-bold text-gray-800 dark:text-gray-200 border-b border-gray-200 dark:border-zinc-700 pb-2">Wheels & Tires</h4><div><label class="block text-[10px] uppercase font-bold text-gray-500 dark:text-zinc-400 mb-1">Tire Size</label><input type="text" name="tire_size" value="{{ vehicle_data.specs.tire_size }}" placeholder="e.g. 225/65R17" class="w-full text-sm border dark:border-zinc-600 rounded p-2 bg-white dark:bg-zinc-900 dark:text-white focus-ring-accent"></div><div><label class="block text-[10px] uppercase font-bold text-gray-500 dark:text-zinc-400 mb-1">Target Pressure (PSI)</label><input type="text" name="tire_pressure" value="{{ vehicle_data.specs.tire_pressure }}" placeholder="e.g. 35 Front / 35 Rear" class="w-full text-sm border dark:border-zinc-600 rounded p-2 bg-white dark:bg-zinc-900 dark:text-white focus-ring-accent"></div></div>
+            <div class="space-y-4"><h4 class="font-bold text-gray-800 dark:text-gray-200 border-b border-gray-200 dark:border-zinc-700 pb-2">Documentation & Electrical</h4><div><label class="block text-[10px] uppercase font-bold text-gray-500 dark:text-zinc-400 mb-1">Wiper Blade Sizes</label><input type="text" name="wiper_blades" value="{{ vehicle_data.specs.wiper_blades }}" placeholder="e.g. 26 D / 16 P" class="w-full text-sm border dark:border-zinc-600 rounded p-2 bg-white dark:bg-zinc-900 dark:text-white focus-ring-accent"></div><div><label class="block text-[10px] uppercase font-bold text-gray-500 dark:text-zinc-400 mb-1">Battery Install Date</label><input type="date" name="battery_date" value="{{ vehicle_data.specs.battery_date }}" class="w-full text-sm border dark:border-zinc-600 rounded p-2 bg-white dark:bg-zinc-900 dark:text-white focus-ring-accent"></div><div><label class="block text-[10px] uppercase font-bold text-gray-500 dark:text-zinc-400 mb-1">Owner's Manual URL (Link)</label><input type="text" name="manual_url" value="{{ vehicle_data.specs.manual_url }}" placeholder="https://..." class="w-full text-sm border dark:border-zinc-600 rounded p-2 bg-white dark:bg-zinc-900 dark:text-white focus-ring-accent"></div></div>
+        </div>
+        <div class="flex gap-2 w-full justify-end mt-4 border-t border-gray-200 dark:border-zinc-700 pt-4"><button type="submit" class="bg-accent text-white py-2 px-6 rounded-lg font-bold transition hover:brightness-90 shadow-md">Save Specs</button><button type="button" onclick="toggleEdit('specs', 'main')" class="bg-gray-200 dark:bg-zinc-700 text-gray-800 dark:text-gray-200 py-2 px-6 rounded-lg font-bold transition hover:brightness-95">Cancel</button></div>
+    </form>
+
+    <div class="border-t border-gray-200 dark:border-zinc-800 pt-8">
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4">
+            <div>
+                <h3 class="text-xl font-bold text-gray-800 dark:text-white mb-1">Torque Specifications</h3>
+                <p class="text-xs text-gray-500 dark:text-zinc-400">Add labels to automatically push specs into specific Garage Mode jobs.</p>
+            </div>
+            
+            <div class="flex gap-2 mt-4 md:mt-0 admin-only">
+                
+                <button id="copy_btn_torque" onclick="copyPrompt('torque')" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs py-1.5 px-3 rounded shadow font-bold transition whitespace-nowrap">📋 Copy AI Prompt</button>
+                
+                <form action="{{ ingress_path }}/api/{{ current_vin }}/import_torque_csv" method="POST" enctype="multipart/form-data" class="flex gap-2 items-center border border-indigo-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 p-1 rounded shadow-sm">
+                    <input type="file" name="csv_file" accept=".csv" required class="text-xs w-full md:w-32 p-1 dark:text-gray-300">
+                    <button type="submit" class="bg-accent text-white text-xs py-1 px-3 rounded shadow font-bold transition whitespace-nowrap">Import</button>
+                </form>
+            </div>
+        </div>
+
+        <div class="bg-gray-50 dark:bg-zinc-800/50 p-4 rounded-lg border dark:border-zinc-800 mb-5 shadow-sm admin-only">
+            <form action="{{ ingress_path }}/api/{{ current_vin }}/add_torque" method="POST" class="flex flex-col md:flex-row flex-wrap gap-3 items-end">
+                <div class="flex-1 w-full min-w-[200px]">
+                    <label class="block text-[10px] text-gray-500 font-bold uppercase mb-1">Component</label>
+                    <input type="text" name="component" placeholder="e.g. Lug Nuts" required class="text-sm border dark:border-zinc-700 rounded p-2 w-full bg-white dark:bg-zinc-900 dark:text-white focus-ring-accent">
+                </div>
+                <div class="flex-1 w-full min-w-[150px]">
+                    <label class="block text-[10px] text-gray-500 font-bold uppercase mb-1">Torque Spec</label>
+                    <input type="text" name="torque" placeholder="e.g. 100 ft-lbs" required class="text-sm border dark:border-zinc-700 rounded p-2 w-full bg-white dark:bg-zinc-900 dark:text-white focus-ring-accent">
+                </div>
+                <div class="flex-1 w-full min-w-[150px]">
+                    <label class="block text-[10px] text-gray-500 font-bold uppercase mb-1">Labels (Comma Separated)</label>
+                    <input type="text" name="labels" placeholder="e.g. Oil, Tire Rotation" class="text-sm border dark:border-zinc-700 rounded p-2 w-full bg-white dark:bg-zinc-900 dark:text-white focus-ring-accent">
+                </div>
+                <button type="submit" class="bg-gray-800 dark:bg-zinc-700 hover:bg-gray-900 text-white font-medium text-sm py-2 px-6 rounded shadow h-[38px] w-full md:w-auto">+ Add Spec</button>
+            </form>
+        </div>
+
+        <div class="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-lg shadow-sm overflow-hidden">
+            <table class="w-full text-sm text-left">
+                <thead class="bg-gray-100 dark:bg-zinc-800 text-gray-600 dark:text-gray-300 uppercase text-[10px] font-bold tracking-wide">
+                    <tr><th class="p-3 border-b dark:border-zinc-700">Component</th><th class="p-3 border-b dark:border-zinc-700">Torque Spec</th><th class="p-3 border-b dark:border-zinc-700">Auto-Link Labels</th><th class="p-3 border-b dark:border-zinc-700 w-16 admin-only text-center">Action</th></tr>
+                </thead>
+                <tbody>
+                    {% if vehicle_data.torque_specs %}
+                        {% for t in vehicle_data.torque_specs %}
+                        <tr class="border-b border-gray-100 dark:border-zinc-800 last:border-0 hover:bg-gray-50 dark:hover:bg-zinc-800/30 transition">
+                            <td class="p-3 text-gray-800 dark:text-gray-200">{{ t.component }}</td>
+                            <td class="p-3 font-bold text-accent">{{ t.torque }}</td>
+                            <td class="p-3 text-gray-500 text-xs italic">{{ t.labels or '-' }}</td>
+                            <td class="p-3 text-center admin-only">
+                                <form action="{{ ingress_path }}/api/{{ current_vin }}/delete_torque/{{ t.id }}" method="POST" onsubmit="return confirm('Remove torque spec?');">
+                                    <button type="submit" class="text-red-500 hover:text-red-700 transition" title="Delete">🗑️</button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr><td colspan="4" class="p-6 text-center text-gray-400 italic">No torque specifications added yet.</td></tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

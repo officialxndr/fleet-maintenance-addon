@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block content %}
+    {% include "_modals.html" %}
+
+    <div class="w-[96%] max-w-[2400px] mx-auto mb-2 flex justify-end gap-2 admin-only">
+        <button onclick="toggleSettingsModal()" class="text-xs font-bold text-gray-500 dark:text-zinc-400 bg-white dark:bg-zinc-900 px-3 py-1.5 rounded shadow-sm border border-gray-200 dark:border-zinc-800 hover:text-accent transition">⚙️ App Settings</button>
+        <button onclick="toggleReadOnly()" id="lock-icon" class="text-xs font-bold text-gray-500 dark:text-zinc-400 bg-white dark:bg-zinc-900 px-3 py-1.5 rounded shadow-sm border border-gray-200 dark:border-zinc-800 hover:text-accent transition">🔓 Dashboard Unlocked</button>
+    </div>
+
+    <div class="w-[96%] max-w-[2400px] mx-auto bg-white dark:bg-zinc-900 rounded-xl shadow-md overflow-hidden p-6 transition-colors duration-200 relative z-10">
+        
+        {% include "_header.html" %}
+        
+        {% if vehicle_data %}
+            <div class="text-sm font-medium text-center text-gray-500 dark:text-zinc-400 border-b border-gray-200 dark:border-zinc-800 mb-6 mt-4">
+                <ul class="flex flex-wrap -mb-px">
+                    <li class="mr-2"><button id="btn-summary" onclick="showTab('summary')" class="tab-btn inline-block p-4 border-b-2 border-transparent rounded-t-lg transition-colors">Summary</button></li>
+                    <li class="mr-2"><button id="btn-timeline" onclick="showTab('timeline')" class="tab-btn inline-block p-4 border-b-2 border-transparent rounded-t-lg transition-colors">Timeline</button></li>
+                    <li class="mr-2 admin-only"><button id="btn-intervals" onclick="showTab('intervals')" class="tab-btn inline-block p-4 border-b-2 border-transparent rounded-t-lg transition-colors">Intervals & Edit</button></li>
+                    <li class="mr-2 admin-only"><button id="btn-logbook" onclick="showTab('logbook')" class="tab-btn inline-block p-4 border-b-2 border-transparent rounded-t-lg transition-colors">Logbook</button></li>
+                    <li class="mr-2"><button id="btn-fuel" onclick="showTab('fuel')" class="tab-btn inline-block p-4 border-b-2 border-transparent rounded-t-lg transition-colors">Fuel Tracker</button></li>
+                    <li class="mr-2 admin-only"><button id="btn-specs" onclick="showTab('specs')" class="tab-btn inline-block p-4 border-b-2 border-transparent rounded-t-lg transition-colors">Glovebox & Specs</button></li>
+                </ul>
+            </div>
+            
+            {% include "_summary.html" %}
+            {% include "_timeline.html" %}
+            {% include "_intervals.html" %}
+            {% include "_logbook.html" %}
+            {% include "_fuel.html" %}
+            {% include "_specs.html" %}
+
+            <script id="global-torque-data" type="application/json">{{ vehicle_data.torque_specs | tojson | safe }}</script>
+        {% endif %}
+        
+        {% include "_add_vehicle.html" %}
+        
+    </div>
+{% endblock %}

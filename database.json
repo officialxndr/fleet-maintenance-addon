@@ -1,0 +1,565 @@
+{
+  "vehicles": {
+    "ZACCJABB9JPG84010": {
+      "year": 2018,
+      "make": "JEEP",
+      "model": "Renegade",
+      "current_mileage": 15750,
+      "services": [
+        {
+          "id": "13",
+          "category": "Brakes",
+          "name": "Brake Fluid",
+          "interval_months": 12,
+          "interval_miles": 15000,
+          "last_service_miles": 1441,
+          "last_service_date": "2026-05-09"
+        },
+        {
+          "id": "14",
+          "category": "Brakes",
+          "name": "Brake Pads",
+          "interval_months": 120,
+          "interval_miles": 50000,
+          "last_service_miles": 90000,
+          "last_service_date": "2024-03-05"
+        },
+        {
+          "id": "15",
+          "category": "Brakes",
+          "name": "Brake Rotors",
+          "interval_months": 120,
+          "interval_miles": 50000,
+          "last_service_miles": 52250,
+          "last_service_date": "01-2023"
+        },
+        {
+          "id": "16",
+          "category": "Cooling",
+          "name": "Coolant Flush",
+          "interval_months": 24,
+          "interval_miles": 20000,
+          "last_service_miles": 1441,
+          "last_service_date": "2026-05-09"
+        },
+        {
+          "id": "17",
+          "category": "Cooling",
+          "name": "Coolant Hoses",
+          "interval_months": 120,
+          "interval_miles": 100000,
+          "last_service_miles": 0,
+          "last_service_date": "01-2021"
+        },
+        {
+          "id": "18",
+          "category": "Cooling",
+          "name": "Water Pump",
+          "interval_months": 48,
+          "interval_miles": 60000,
+          "last_service_miles": 1441,
+          "last_service_date": "2026-05-09"
+        },
+        {
+          "id": "19",
+          "category": "Cooling",
+          "name": "Thermostat",
+          "interval_months": 48,
+          "interval_miles": 35000,
+          "last_service_miles": 1441,
+          "last_service_date": "2026-05-09"
+        },
+        {
+          "id": "20",
+          "category": "Drivetrain",
+          "name": "Differential Fluid",
+          "interval_months": 120,
+          "interval_miles": 60000,
+          "last_service_miles": 1441,
+          "last_service_date": "2026-05-09"
+        },
+        {
+          "id": "21",
+          "category": "Engine",
+          "name": "Air Filter",
+          "interval_months": 60,
+          "interval_miles": 60000,
+          "last_service_miles": 105000,
+          "last_service_date": "2025-05-10"
+        },
+        {
+          "id": "22",
+          "category": "Engine",
+          "name": "Engine Oil & Filter",
+          "interval_months": 12,
+          "interval_miles": 5000,
+          "last_service_miles": 115000,
+          "last_service_date": "2026-01-15"
+        },
+        {
+          "id": "23",
+          "category": "Engine",
+          "name": "Fuel Filter",
+          "interval_months": 120,
+          "interval_miles": 60000,
+          "last_service_miles": 30000,
+          "last_service_date": "06-2021"
+        },
+        {
+          "id": "24",
+          "category": "Engine",
+          "name": "Timing Chain Tensioner",
+          "interval_months": 60,
+          "interval_miles": 80000,
+          "last_service_miles": 1441,
+          "last_service_date": "2026-05-09"
+        },
+        {
+          "id": "25",
+          "category": "Engine",
+          "name": "Engine Mount",
+          "interval_months": 120,
+          "interval_miles": 100000,
+          "last_service_miles": 0,
+          "last_service_date": "01-2019"
+        },
+        {
+          "id": "26",
+          "category": "Engine",
+          "name": "Belts and Pulleys",
+          "interval_months": 48,
+          "interval_miles": 60000,
+          "last_service_miles": 1441,
+          "last_service_date": "2026-05-09"
+        },
+        {
+          "id": "27",
+          "category": "Engine",
+          "name": "O2 Sensors",
+          "interval_months": 72,
+          "interval_miles": 100000,
+          "last_service_miles": 1441,
+          "last_service_date": "2026-05-09"
+        },
+        {
+          "id": "28",
+          "category": "Engine",
+          "name": "Spark Plugs",
+          "interval_months": 60,
+          "interval_miles": 60000,
+          "last_service_miles": 50000,
+          "last_service_date": "01-2022"
+        },
+        {
+          "id": "29",
+          "category": "Other",
+          "name": "Cabin Filter",
+          "interval_months": 12,
+          "interval_miles": 20000,
+          "last_service_miles": 110000,
+          "last_service_date": "2025-09-18"
+        },
+        {
+          "id": "30",
+          "category": "Steering",
+          "name": "Alignment",
+          "interval_months": 24,
+          "interval_miles": 30000,
+          "last_service_miles": 1441,
+          "last_service_date": "2026-05-09"
+        },
+        {
+          "id": "31",
+          "category": "Steering",
+          "name": "Power Steering Fluid",
+          "interval_months": 24,
+          "interval_miles": 50000,
+          "last_service_miles": 1441,
+          "last_service_date": "2026-05-09"
+        },
+        {
+          "id": "32",
+          "category": "Steering",
+          "name": "Rotate Tires",
+          "interval_months": 24,
+          "interval_miles": 75000,
+          "last_service_miles": 112000,
+          "last_service_date": "2025-11-20"
+        },
+        {
+          "id": "33",
+          "category": "Transmission",
+          "name": "Transmission Fluid",
+          "interval_months": 120,
+          "interval_miles": 60000,
+          "last_service_miles": 30000,
+          "last_service_date": "06-2021"
+        },
+        {
+          "id": "34",
+          "category": "Drivetrain",
+          "name": "Transfer Case",
+          "interval_months": 120,
+          "interval_miles": 60000,
+          "last_service_miles": 1441,
+          "last_service_date": "2026-05-09"
+        },
+        {
+          "id": "6456824c",
+          "category": "Other",
+          "name": "Wiper Blades",
+          "interval_months": 12,
+          "interval_miles": 10000,
+          "last_service_miles": 108000,
+          "last_service_date": "2025-08-01"
+        },
+        {
+          "id": "aad54b45",
+          "category": "teeee",
+          "name": "ssfs",
+          "interval_months": 5,
+          "interval_miles": 100,
+          "last_service_miles": 118000,
+          "last_service_date": "2026-05-09"
+        }
+      ],
+      "logbook": [
+        {
+          "date": "07-2026",
+          "service": "Coolant Flush",
+          "mileage": 118000,
+          "notes": "",
+          "id": "60e6bb72"
+        },
+        {
+          "date": "2026-04-05",
+          "service": "Coolant Flush v4",
+          "mileage": 118000,
+          "notes": "",
+          "id": "1c35856f"
+        },
+        {
+          "id": "e616cbe5",
+          "date": "2026-01-15",
+          "service": "Engine Oil & Filter",
+          "mileage": 115000,
+          "notes": "Valvoline Full Synthetic 5W-20"
+        },
+        {
+          "id": "8dd28936",
+          "date": "2025-05-10",
+          "service": "Air Filter",
+          "mileage": 105000,
+          "notes": "Replaced with OEM engine air filter"
+        },
+        {
+          "id": "8b1360dc",
+          "date": "2025-11-20",
+          "service": "Rotate Tires",
+          "mileage": 112000,
+          "notes": "Discount Tire standard rotation"
+        },
+        {
+          "id": "cadb7eff",
+          "date": "2024-03-05",
+          "service": "Brake Pads",
+          "mileage": 90000,
+          "notes": "Front and rear ceramic pads replaced"
+        },
+        {
+          "id": "b25c1416",
+          "date": "2025-01-12",
+          "service": "Brake Fluid",
+          "mileage": 100000,
+          "notes": "Brake fluid system flushed and bled"
+        },
+        {
+          "id": "ca9d3d88",
+          "date": "2023-06-22",
+          "service": "Coolant Flush",
+          "mileage": 80000,
+          "notes": "Coolant flushed at the dealership"
+        },
+        {
+          "id": "40ee5a4f",
+          "date": "2025-09-18",
+          "service": "Cabin Filter",
+          "mileage": 110000,
+          "notes": "Replaced interior cabin air filter"
+        },
+        {
+          "id": "f66e5127",
+          "date": "2025-08-01",
+          "service": "Wiper Blades",
+          "mileage": 108000,
+          "notes": "Replaced front wiper blades (New Custom Service Test)"
+        },
+        {
+          "id": "0091a466",
+          "date": "2026-01-15",
+          "service": "Engine Oil & Filter",
+          "mileage": 115000,
+          "notes": "Valvoline Full Synthetic 5W-20"
+        },
+        {
+          "id": "c79df05d",
+          "date": "2025-05-10",
+          "service": "Air Filter",
+          "mileage": 105000,
+          "notes": "Replaced with OEM engine air filter"
+        },
+        {
+          "id": "9e25c69a",
+          "date": "2025-11-20",
+          "service": "Rotate Tires",
+          "mileage": 112000,
+          "notes": "Discount Tire standard rotation"
+        },
+        {
+          "id": "bcd28c34",
+          "date": "2024-03-05",
+          "service": "Brake Pads",
+          "mileage": 90000,
+          "notes": "Front and rear ceramic pads replaced"
+        },
+        {
+          "id": "55df877e",
+          "date": "2025-01-12",
+          "service": "Brake Fluid",
+          "mileage": 100000,
+          "notes": "Brake fluid system flushed and bled"
+        },
+        {
+          "id": "6405ce0e",
+          "date": "2023-06-22",
+          "service": "Coolant Flush",
+          "mileage": 80000,
+          "notes": "Coolant flushed at the dealership"
+        },
+        {
+          "id": "9025eefa",
+          "date": "2025-09-18",
+          "service": "Cabin Filter",
+          "mileage": 110000,
+          "notes": "Replaced interior cabin air filter"
+        },
+        {
+          "id": "fdfe2921",
+          "date": "2025-08-01",
+          "service": "Wiper Blades",
+          "mileage": 108000,
+          "notes": "Replaced front wiper blades (New Custom Service Test)"
+        },
+        {
+          "id": "066d009f",
+          "date": "2026-01-15",
+          "service": "Engine Oil & Filter",
+          "mileage": 115000,
+          "notes": "Valvoline Full Synthetic 5W-20"
+        },
+        {
+          "id": "9f426378",
+          "date": "2025-05-10",
+          "service": "Air Filter",
+          "mileage": 105000,
+          "notes": "Replaced with OEM engine air filter"
+        },
+        {
+          "id": "d523cec2",
+          "date": "2025-11-20",
+          "service": "Rotate Tires",
+          "mileage": 112000,
+          "notes": "Discount Tire standard rotation"
+        },
+        {
+          "id": "6f047786",
+          "date": "2024-03-05",
+          "service": "Brake Pads",
+          "mileage": 90000,
+          "notes": "Front and rear ceramic pads replaced"
+        },
+        {
+          "id": "45924328",
+          "date": "2025-01-12",
+          "service": "Brake Fluid",
+          "mileage": 100000,
+          "notes": "Brake fluid system flushed and bled"
+        },
+        {
+          "id": "084902d4",
+          "date": "2023-06-22",
+          "service": "Coolant Flush",
+          "mileage": 80000,
+          "notes": "Coolant flushed at the dealership"
+        },
+        {
+          "id": "b9e1d4f6",
+          "date": "2025-09-18",
+          "service": "Cabin Filter",
+          "mileage": 110000,
+          "notes": "Replaced interior cabin air filter"
+        },
+        {
+          "id": "fc5047e4",
+          "date": "2025-08-01",
+          "service": "Wiper Blades",
+          "mileage": 108000,
+          "notes": "Replaced front wiper blades (New Custom Service Test)"
+        },
+        {
+          "id": "32d4b58f",
+          "date": "2026-05-09",
+          "service": "Water Pump",
+          "mileage": 1441,
+          "notes": ""
+        },
+        {
+          "id": "f53fa7aa",
+          "date": "2026-05-09",
+          "service": "Thermostat",
+          "mileage": 1441,
+          "notes": ""
+        },
+        {
+          "id": "6a236f42",
+          "date": "2026-05-09",
+          "service": "Timing Chain Tensioner",
+          "mileage": 1441,
+          "notes": ""
+        },
+        {
+          "id": "eb16c511",
+          "date": "2026-05-09",
+          "service": "Alignment",
+          "mileage": 1441,
+          "notes": ""
+        },
+        {
+          "id": "e8e0ae0a",
+          "date": "2026-05-09",
+          "service": "Power Steering Fluid",
+          "mileage": 1441,
+          "notes": ""
+        },
+        {
+          "id": "8c6f255f",
+          "date": "2026-05-09",
+          "service": "Differential Fluid",
+          "mileage": 1441,
+          "notes": ""
+        },
+        {
+          "id": "4c5992d4",
+          "date": "2026-05-09",
+          "service": "Belts and Pulleys",
+          "mileage": 1441,
+          "notes": ""
+        },
+        {
+          "id": "7a5f0dfc",
+          "date": "2026-05-09",
+          "service": "Coolant Flush",
+          "mileage": 1441,
+          "notes": ""
+        },
+        {
+          "id": "9584793f",
+          "date": "2026-05-09",
+          "service": "O2 Sensors",
+          "mileage": 1441,
+          "notes": ""
+        },
+        {
+          "id": "086671d4",
+          "date": "2026-05-09",
+          "service": "Brake Fluid",
+          "mileage": 1441,
+          "notes": ""
+        },
+        {
+          "id": "317a3de1",
+          "date": "2026-05-09",
+          "service": "Transfer Case",
+          "mileage": 1441,
+          "notes": ""
+        }
+      ],
+      "theme_color": "#3b82f6",
+      "ha_entity_id": "input_number.jeep_mileage"
+    },
+    "3GCUKHE82TG299564": {
+      "year": "2026",
+      "make": "CHEVROLET",
+      "model": "Silverado",
+      "current_mileage": 50000,
+      "services": [
+        {
+          "category": "Engine",
+          "name": "Engine Oil & Filter",
+          "interval_months": 12,
+          "interval_miles": 5000,
+          "id": "d88f384a",
+          "last_service_miles": 50000,
+          "last_service_date": "2026-05-09"
+        },
+        {
+          "category": "Engine",
+          "name": "Air Filter",
+          "interval_months": 24,
+          "interval_miles": 30000,
+          "id": "2196d911",
+          "last_service_miles": 50000,
+          "last_service_date": "2026-05-09"
+        },
+        {
+          "category": "Steering",
+          "name": "Rotate Tires",
+          "interval_months": 12,
+          "interval_miles": 10000,
+          "id": "36a0c9c0",
+          "last_service_miles": 50000,
+          "last_service_date": "2026-05-09"
+        },
+        {
+          "category": "Brakes",
+          "name": "Brake Pads",
+          "interval_months": 60,
+          "interval_miles": 50000,
+          "id": "41b9a81a",
+          "last_service_miles": 50000,
+          "last_service_date": "2026-05-09"
+        },
+        {
+          "category": "Brakes",
+          "name": "Brake Fluid",
+          "interval_months": 24,
+          "interval_miles": 20000,
+          "id": "4d811af7",
+          "last_service_miles": 50000,
+          "last_service_date": "2026-05-09"
+        },
+        {
+          "category": "Cooling",
+          "name": "Coolant Flush",
+          "interval_months": 60,
+          "interval_miles": 50000,
+          "id": "27cf513b",
+          "last_service_miles": 50000,
+          "last_service_date": "2026-05-09"
+        },
+        {
+          "category": "Other",
+          "name": "Cabin Filter",
+          "interval_months": 12,
+          "interval_miles": 15000,
+          "id": "ca726176",
+          "last_service_miles": 50000,
+          "last_service_date": "2026-05-09"
+        }
+      ],
+      "logbook": [],
+      "theme_color": "#f59e0b",
+      "ha_entity_id": ""
+    }
+  }
+}

@@ -1,0 +1,142 @@
+<div id="global-settings-modal" class="hidden fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
+    <div class="bg-white dark:bg-zinc-900 rounded-xl shadow-2xl p-6 w-full max-w-lg relative max-h-[90vh] overflow-y-auto">
+        <div class="flex justify-between items-start mb-4">
+            <div>
+                <h3 class="text-xl font-bold text-gray-800 dark:text-white">Global App Settings</h3>
+                <p class="text-xs text-gray-500 dark:text-zinc-400">Rules and formats for all vehicles in your fleet.</p>
+            </div>
+            <button onclick="toggleSettingsModal()" class="text-gray-400 hover:text-gray-600 dark:hover:text-white text-xl font-bold">✕</button>
+        </div>
+        
+        <form action="{{ ingress_path }}/api/update_global_settings" method="POST" class="space-y-6">
+            <div class="space-y-4">
+                <h4 class="text-sm font-bold text-gray-800 dark:text-gray-200 border-b border-gray-200 dark:border-zinc-700 pb-1">Localization</h4>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div>
+                        <label class="block text-[10px] font-bold text-gray-500 dark:text-zinc-400 uppercase tracking-wide mb-1">Unit</label>
+                        <select name="unit" class="w-full text-sm border border-gray-300 dark:border-zinc-700 rounded-lg p-2 bg-gray-50 dark:bg-zinc-800 dark:text-white focus-ring-accent">
+                            <option value="mi" {% if global_settings.unit == 'mi' %}selected{% endif %}>Miles (mi)</option><option value="km" {% if global_settings.unit == 'km' %}selected{% endif %}>Kilometers (km)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-gray-500 dark:text-zinc-400 uppercase tracking-wide mb-1">Currency</label>
+                        <select name="currency" class="w-full text-sm border border-gray-300 dark:border-zinc-700 rounded-lg p-2 bg-gray-50 dark:bg-zinc-800 dark:text-white focus-ring-accent">
+                            <option value="$" {% if global_settings.currency == '$' %}selected{% endif %}>Dollar ($)</option><option value="€" {% if global_settings.currency == '€' %}selected{% endif %}>Euro (€)</option><option value="£" {% if global_settings.currency == '£' %}selected{% endif %}>Pound (£)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-gray-500 dark:text-zinc-400 uppercase tracking-wide mb-1">Date Format</label>
+                        <select name="date_format" class="w-full text-sm border border-gray-300 dark:border-zinc-700 rounded-lg p-2 bg-gray-50 dark:bg-zinc-800 dark:text-white focus-ring-accent">
+                            <option value="YYYY-MM-DD" {% if global_settings.date_format == 'YYYY-MM-DD' %}selected{% endif %}>YYYY-MM-DD</option><option value="MM/DD/YYYY" {% if global_settings.date_format == 'MM/DD/YYYY' %}selected{% endif %}>MM/DD/YYYY</option><option value="DD/MM/YYYY" {% if global_settings.date_format == 'DD/MM/YYYY' %}selected{% endif %}>DD/MM/YYYY</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="space-y-4">
+                <h4 class="text-sm font-bold text-gray-800 dark:text-gray-200 border-b border-gray-200 dark:border-zinc-700 pb-1">Thresholds</h4>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-[10px] font-bold text-gray-500 dark:text-zinc-400 uppercase tracking-wide mb-1">"Coming Up" Alert (Distance)</label>
+                        <input type="number" name="coming_up_miles" value="{{ global_settings.coming_up_miles }}" required class="w-full text-sm border border-gray-300 dark:border-zinc-700 rounded-lg p-2 bg-gray-50 dark:bg-zinc-800 dark:text-white focus-ring-accent">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-gray-500 dark:text-zinc-400 uppercase tracking-wide mb-1">"Coming Up" Alert (Months)</label>
+                        <input type="number" name="coming_up_months" value="{{ global_settings.coming_up_months }}" required class="w-full text-sm border border-gray-300 dark:border-zinc-700 rounded-lg p-2 bg-gray-50 dark:bg-zinc-800 dark:text-white focus-ring-accent">
+                    </div>
+                </div>
+            </div>
+
+            <div class="space-y-4">
+                <h4 class="text-sm font-bold text-gray-800 dark:text-gray-200 border-b border-gray-200 dark:border-zinc-700 pb-1">Integrations & Intelligence</h4>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3 items-end mb-3">
+                    <div>
+                        <label class="block text-[10px] font-bold text-gray-500 dark:text-zinc-400 uppercase tracking-wide mb-1">HA Polling Interval (Sec)</label>
+                        <input type="number" name="ha_polling" value="{{ global_settings.ha_polling }}" min="5" required class="w-full text-sm border border-gray-300 dark:border-zinc-700 rounded-lg p-2 bg-gray-50 dark:bg-zinc-800 dark:text-white focus-ring-accent">
+                    </div>
+                    <div>
+                        <label class="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer p-2 border border-gray-300 dark:border-zinc-700 rounded-lg bg-gray-50 dark:bg-zinc-800">
+                            <input type="checkbox" name="mqtt_enabled" class="w-4 h-4 rounded text-accent focus-ring-accent" {% if global_settings.mqtt_enabled == 'on' %}checked{% endif %}>
+                            Enable MQTT Discovery
+                        </label>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-[10px] font-bold text-gray-500 dark:text-zinc-400 uppercase tracking-wide mb-1">Local Temperature Sensor (HA Entity ID)</label>
+                    <input type="text" name="temp_entity_id" value="{{ global_settings.temp_entity_id }}" placeholder="sensor.outdoor_temperature" class="w-full text-sm border border-gray-300 dark:border-zinc-700 rounded-lg p-2 bg-gray-50 dark:bg-zinc-800 dark:text-white focus-ring-accent">
+                    <p class="text-[10px] text-gray-500 dark:text-zinc-500 mt-1">Used to trigger battery warnings when temperatures drop below zero.</p>
+                </div>
+            </div>
+
+            <div class="flex gap-2 w-full pt-4 border-t border-gray-200 dark:border-zinc-800">
+                <button type="submit" class="flex-1 bg-accent hover:brightness-90 text-white font-bold py-2 px-4 rounded-lg shadow-sm transition">Save Changes</button>
+            </div>
+        </form>
+
+        <div class="mt-6 pt-4 border-t border-gray-200 dark:border-zinc-800 space-y-3">
+            <h4 class="text-sm font-bold text-red-600 dark:text-red-400 mb-2">Database Tools</h4>
+            <div class="flex flex-col md:flex-row gap-2">
+                <a href="{{ ingress_path }}/api/export_db" class="flex-1 text-center bg-gray-800 hover:bg-gray-900 dark:bg-zinc-700 dark:hover:bg-zinc-600 text-white text-xs font-bold py-2 px-4 rounded shadow-sm transition">📥 Export Full Database</a>
+                <form action="{{ ingress_path }}/api/vacuum_db" method="POST" onsubmit="return confirm('This will permanently delete any empty logbook entries or blank services. Proceed?');" class="flex-1">
+                    <button type="submit" class="w-full bg-red-50 dark:bg-red-900/10 hover:bg-red-100 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-900/30 text-xs py-2 px-4 rounded shadow-sm font-bold transition">🧹 Vacuum Database</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="service-details-modal" class="hidden fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm transition-opacity">
+    <div class="bg-white dark:bg-zinc-900 rounded-xl shadow-2xl p-6 w-full max-w-lg relative max-h-[90vh] overflow-y-auto">
+        <button onclick="closeServiceDetails()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:hover:text-white text-xl font-bold">✕</button>
+        
+        <div class="mb-4 pr-6">
+            <p id="sd-category" class="text-[10px] text-gray-500 dark:text-zinc-400 font-bold uppercase tracking-wide mb-1">Category</p>
+            <h3 id="sd-name" class="text-2xl font-bold text-gray-800 dark:text-white">Service Name</h3>
+            <span id="sd-status" class="inline-block mt-2 text-xs font-bold px-2 py-1 rounded bg-gray-100 text-gray-800 dark:bg-zinc-800 dark:text-gray-300 border border-gray-200 dark:border-zinc-700">Status</span>
+        </div>
+        
+        <div class="space-y-4 bg-gray-50 dark:bg-zinc-800/50 p-4 rounded-lg border border-gray-100 dark:border-zinc-800 mb-6">
+            <div><p class="text-[10px] uppercase font-bold text-gray-400 dark:text-zinc-500">Last Performed</p><p id="sd-last" class="font-medium text-gray-800 dark:text-gray-200">-</p></div>
+            <div><p class="text-[10px] uppercase font-bold text-gray-400 dark:text-zinc-500">Due At</p><p id="sd-due" class="font-medium text-gray-800 dark:text-gray-200">-</p></div>
+            <div><p class="text-[10px] uppercase font-bold text-gray-400 dark:text-zinc-500">Remaining</p><p id="sd-remain" class="font-bold text-accent">-</p></div>
+        </div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 border-t border-gray-200 dark:border-zinc-800 pt-4">
+            
+            <div>
+                <div class="flex justify-between items-center mb-2">
+                    <p class="text-[10px] uppercase font-bold text-gray-400 dark:text-zinc-500">Required Parts</p>
+                    <button id="btn-toggle-part" class="admin-only text-[10px] font-bold text-accent hover:underline hidden" onclick="document.getElementById('sd-add-part-form').classList.toggle('hidden')">+ Add</button>
+                </div>
+                
+                <form id="sd-add-part-form" onsubmit="submitGaragePart(event)" class="hidden mb-3 flex gap-1 items-center bg-gray-50 dark:bg-zinc-800 p-2 rounded">
+                    <input type="hidden" name="type" value="part">
+                    <input type="text" name="name" placeholder="Item" required class="text-[10px] border dark:border-zinc-700 rounded p-1 w-1/2 bg-white dark:bg-zinc-900 dark:text-white">
+                    <input type="text" name="value" placeholder="Spec" required class="text-[10px] border dark:border-zinc-700 rounded p-1 w-1/2 bg-white dark:bg-zinc-900 dark:text-white">
+                    <button type="submit" class="bg-gray-800 dark:bg-zinc-700 text-white text-[10px] px-2 py-1 rounded font-bold transition hover:bg-gray-900">✓</button>
+                </form>
+
+                <div id="sd-parts-list" class="mb-3 border border-gray-100 dark:border-zinc-800 rounded p-2 bg-white dark:bg-zinc-900/50">
+                    </div>
+            </div>
+
+            <div>
+                <div class="flex justify-between items-center mb-2">
+                    <p class="text-[10px] uppercase font-bold text-gray-400 dark:text-zinc-500">Torque Specs</p>
+                    <button id="btn-toggle-torque" class="admin-only text-[10px] font-bold text-accent hover:underline hidden" onclick="document.getElementById('sd-add-torque-form').classList.toggle('hidden')">+ Add</button>
+                </div>
+
+                <form id="sd-add-torque-form" onsubmit="submitGarageTorque(event)" class="hidden mb-3 flex gap-1 items-center bg-gray-50 dark:bg-zinc-800 p-2 rounded">
+                    <input type="hidden" id="sd-torque-labels" name="labels" value="">
+                    <input type="text" name="component" placeholder="Bolt" required class="text-[10px] border dark:border-zinc-700 rounded p-1 w-1/2 bg-white dark:bg-zinc-900 dark:text-white">
+                    <input type="text" name="torque" placeholder="Torque" required class="text-[10px] border dark:border-zinc-700 rounded p-1 w-1/2 bg-white dark:bg-zinc-900 dark:text-white">
+                    <button type="submit" class="bg-accent text-white text-[10px] px-2 py-1 rounded font-bold transition hover:brightness-90">✓</button>
+                </form>
+
+                <div id="sd-torque-list" class="mb-3 border border-gray-100 dark:border-zinc-800 rounded p-2 bg-white dark:bg-zinc-900/50">
+                    </div>
+            </div>
+        </div>
+
+    </div>
+</div>

@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <div class="w-[96%] max-w-[2400px] mx-auto bg-white dark:bg-zinc-900 rounded-xl shadow-md overflow-hidden p-6 transition-colors duration-200 mt-6 relative z-10">
+        
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4 border-b border-gray-100 dark:border-zinc-800 pb-6">
+            <div class="flex items-center gap-4">
+                {% if vehicle_data.image_url %}
+                <img src="{{ vehicle_data.image_url }}" alt="Vehicle" class="w-16 h-16 rounded-xl object-cover shadow-sm">
+                {% endif %}
+                <div>
+                    <h2 class="text-2xl font-bold text-gray-800 dark:text-white">{{ vehicle_data.nickname or vehicle_data.model }}</h2>
+                    <p class="text-sm text-gray-500">{{ vehicle_data.year }} {{ vehicle_data.make }} {{ vehicle_data.model }}</p>
+                </div>
+            </div>
+            <div class="text-right">
+                <p class="text-3xl font-bold text-accent">{{ "{:,}".format(vehicle_data.current_mileage) }}</p>
+                <p class="text-xs text-gray-500 uppercase tracking-wide font-bold mb-1">Current {{ 'Kilometers' if global_settings.unit == 'km' else 'Miles' }}</p>
+            </div>
+        </div>
+
+        <div class="text-sm font-medium text-center text-gray-500 dark:text-zinc-400 border-b border-gray-200 dark:border-zinc-800 mb-6">
+            <ul class="flex flex-wrap -mb-px">
+                <li class="mr-2"><button id="btn-summary" onclick="showTab('summary')" class="tab-btn inline-block p-4 border-b-2 border-accent text-accent rounded-t-lg transition-colors">Summary</button></li>
+                <li class="mr-2"><button id="btn-fuel" onclick="showTab('fuel')" class="tab-btn inline-block p-4 border-b-2 border-transparent rounded-t-lg transition-colors">Fuel Tracker</button></li>
+            </ul>
+        </div>
+        
+        {% include "_summary.html" %}
+        {% include "_fuel.html" %}
+        
+    </div>
+{% endblock %}
