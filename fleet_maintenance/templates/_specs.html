@@ -68,7 +68,8 @@
                 <tbody id="torque-specs-tbody">
                     {% if vehicle_data.torque_specs %}
                         {% for t in vehicle_data.torque_specs %}
-                        <tr id="torque-row-{{ t.id }}" class="border-b border-gray-100 dark:border-zinc-800 last:border-0 hover:bg-gray-50 dark:hover:bg-zinc-800/30 transition">
+                        <!-- View row -->
+                        <tr id="torque-row-{{ t.id }}" data-component="{{ t.component | e }}" data-torque="{{ t.torque | e }}" data-labels="{{ t.labels | e }}" class="border-b border-gray-100 dark:border-zinc-800 last:border-0 hover:bg-gray-50 dark:hover:bg-zinc-800/30 transition">
                             <td class="p-3 text-gray-800 dark:text-gray-200" id="torque-row-{{ t.id }}-component">{{ t.component }}</td>
                             <td class="p-3 font-bold text-accent" id="torque-row-{{ t.id }}-torque">{{ t.torque }}</td>
                             <td class="p-3" id="torque-row-{{ t.id }}-labels">
@@ -83,8 +84,26 @@
                             </td>
                             <td class="p-3 text-center admin-only">
                                 <div class="flex items-center justify-center gap-2">
-                                    <button type="button" onclick="openEditTorque('{{ t.id }}')" data-torque="{{ t | tojson | e }}" class="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-800/50 border border-blue-200 dark:border-blue-700 px-2.5 py-1 rounded transition" title="Edit">Edit</button>
-                                    <button type="button" onclick="deleteSpecsTorque('{{ t.id }}')" class="inline-flex items-center gap-1 text-xs font-semibold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30 hover:bg-red-100 dark:hover:bg-red-800/50 border border-red-200 dark:border-red-700 px-2.5 py-1 rounded transition" title="Delete">Delete</button>
+                                    <button type="button" onclick="openEditTorque('{{ t.id }}')" class="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-800/50 border border-blue-200 dark:border-blue-700 px-2.5 py-1 rounded transition">Edit</button>
+                                    <button type="button" onclick="deleteSpecsTorque('{{ t.id }}')" class="inline-flex items-center gap-1 text-xs font-semibold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30 hover:bg-red-100 dark:hover:bg-red-800/50 border border-red-200 dark:border-red-700 px-2.5 py-1 rounded transition">Delete</button>
+                                </div>
+                            </td>
+                        </tr>
+                        <!-- Inline edit row (hidden until Edit is clicked) -->
+                        <tr id="torque-edit-row-{{ t.id }}" class="hidden border-b border-blue-100 dark:border-blue-900/40 bg-blue-50/60 dark:bg-blue-900/10">
+                            <td class="p-2">
+                                <input type="text" id="torque-edit-component-{{ t.id }}" class="w-full text-sm border border-gray-300 dark:border-zinc-600 rounded-lg px-2 py-1.5 bg-white dark:bg-zinc-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-accent/50" placeholder="Component / Bolt">
+                            </td>
+                            <td class="p-2">
+                                <input type="text" id="torque-edit-torque-{{ t.id }}" class="w-full text-sm border border-gray-300 dark:border-zinc-600 rounded-lg px-2 py-1.5 bg-white dark:bg-zinc-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-accent/50" placeholder="e.g. 100 ft-lbs">
+                            </td>
+                            <td class="p-2">
+                                <div id="torque-edit-chip-{{ t.id }}" class="label-chip-widget"></div>
+                            </td>
+                            <td class="p-2 text-center admin-only">
+                                <div class="flex items-center justify-center gap-2">
+                                    <button type="button" onclick="saveInlineEditTorque('{{ t.id }}')" class="inline-flex items-center gap-1 text-xs font-semibold text-white bg-accent hover:brightness-90 px-2.5 py-1 rounded transition">Save</button>
+                                    <button type="button" onclick="cancelInlineEditTorque('{{ t.id }}')" class="inline-flex items-center gap-1 text-xs font-semibold text-gray-600 dark:text-gray-300 bg-gray-200 dark:bg-zinc-700 hover:bg-gray-300 dark:hover:bg-zinc-600 px-2.5 py-1 rounded transition">Cancel</button>
                                 </div>
                             </td>
                         </tr>
@@ -98,34 +117,6 @@
     </div>
 </div>
 
-<!-- Edit Torque Modal -->
-<div id="edit-torque-modal" class="hidden fixed inset-0 bg-black/60 z-[110] flex items-center justify-center p-4 backdrop-blur-sm">
-    <div class="bg-white dark:bg-zinc-900 rounded-xl shadow-2xl p-6 w-full max-w-lg relative">
-        <div class="flex justify-between items-center mb-4">
-            <h3 class="text-lg font-bold text-gray-800 dark:text-white">Edit Torque Spec</h3>
-            <button onclick="document.getElementById('edit-torque-modal').classList.add('hidden')" class="text-gray-400 hover:text-gray-600 dark:hover:text-white text-xl font-bold">✕</button>
-        </div>
-        <input type="hidden" id="edit-torque-id">
-        <div class="space-y-4">
-            <div>
-                <label class="block text-[10px] font-bold text-gray-500 dark:text-zinc-400 uppercase tracking-wide mb-1">Component / Bolt</label>
-                <input type="text" id="edit-torque-component" class="w-full text-sm border dark:border-zinc-700 rounded-lg p-2 bg-gray-50 dark:bg-zinc-800 dark:text-white focus-ring-accent">
-            </div>
-            <div>
-                <label class="block text-[10px] font-bold text-gray-500 dark:text-zinc-400 uppercase tracking-wide mb-1">Torque Value</label>
-                <input type="text" id="edit-torque-value" class="w-full text-sm border dark:border-zinc-700 rounded-lg p-2 bg-gray-50 dark:bg-zinc-800 dark:text-white focus-ring-accent">
-            </div>
-            <div>
-                <label class="block text-[10px] font-bold text-gray-500 dark:text-zinc-400 uppercase tracking-wide mb-1">Auto-Link Labels</label>
-                <div id="edit-torque-chip-widget" class="label-chip-widget"></div>
-            </div>
-        </div>
-        <div class="flex gap-3 mt-6 pt-4 border-t border-gray-200 dark:border-zinc-800">
-            <button type="button" onclick="saveEditTorque()" class="flex-1 bg-accent hover:brightness-90 text-white font-bold py-2 px-4 rounded-lg shadow-sm transition">Save Changes</button>
-            <button type="button" onclick="document.getElementById('edit-torque-modal').classList.add('hidden')" class="flex-1 bg-gray-200 dark:bg-zinc-700 text-gray-800 dark:text-gray-200 font-bold py-2 px-4 rounded-lg transition">Cancel</button>
-        </div>
-    </div>
-</div>
 
 <style>
 .label-chip-widget {
@@ -386,7 +377,6 @@ function createChipWidget(container, initialLabels) {
 // Init widgets on DOM ready
 document.addEventListener('DOMContentLoaded', () => {
     createChipWidget(document.getElementById('add-torque-chip-widget'), '');
-    createChipWidget(document.getElementById('edit-torque-chip-widget'), '');
 });
 
 // ==========================================
@@ -401,17 +391,29 @@ function torqueLabelChipsHtml(labels) {
 }
 
 function buildTorqueRow(t, isAdmin) {
-    const adminCells = isAdmin
+    const adminViewCell = isAdmin
         ? `<td class="p-3 text-center admin-only"><div class="flex items-center justify-center gap-2">
-              <button type="button" onclick="openEditTorque('${t.id}', ${JSON.stringify(t).replace(/'/g, "&#39;")})" class="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-800/50 border border-blue-200 dark:border-blue-700 px-2.5 py-1 rounded transition" title="Edit">Edit</button>
-              <button type="button" onclick="deleteSpecsTorque('${t.id}')" class="inline-flex items-center gap-1 text-xs font-semibold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30 hover:bg-red-100 dark:hover:bg-red-800/50 border border-red-200 dark:border-red-700 px-2.5 py-1 rounded transition" title="Delete">Delete</button>
+              <button type="button" onclick="openEditTorque('${t.id}')" class="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-800/50 border border-blue-200 dark:border-blue-700 px-2.5 py-1 rounded transition">Edit</button>
+              <button type="button" onclick="deleteSpecsTorque('${t.id}')" class="inline-flex items-center gap-1 text-xs font-semibold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30 hover:bg-red-100 dark:hover:bg-red-800/50 border border-red-200 dark:border-red-700 px-2.5 py-1 rounded transition">Delete</button>
            </div></td>`
         : '<td class="p-3 text-center admin-only"></td>';
-    return `<tr id="torque-row-${t.id}" class="border-b border-gray-100 dark:border-zinc-800 last:border-0 hover:bg-gray-50 dark:hover:bg-zinc-800/30 transition">
+    const adminEditCell = isAdmin
+        ? `<td class="p-2 text-center admin-only"><div class="flex items-center justify-center gap-2">
+              <button type="button" onclick="saveInlineEditTorque('${t.id}')" class="inline-flex items-center gap-1 text-xs font-semibold text-white bg-accent hover:brightness-90 px-2.5 py-1 rounded transition">Save</button>
+              <button type="button" onclick="cancelInlineEditTorque('${t.id}')" class="inline-flex items-center gap-1 text-xs font-semibold text-gray-600 dark:text-gray-300 bg-gray-200 dark:bg-zinc-700 hover:bg-gray-300 dark:hover:bg-zinc-600 px-2.5 py-1 rounded transition">Cancel</button>
+           </div></td>`
+        : '<td class="p-2 text-center admin-only"></td>';
+    return `<tr id="torque-row-${t.id}" data-component="${(t.component||'').replace(/"/g,'&quot;')}" data-torque="${(t.torque||'').replace(/"/g,'&quot;')}" data-labels="${(t.labels||'').replace(/"/g,'&quot;')}" class="border-b border-gray-100 dark:border-zinc-800 last:border-0 hover:bg-gray-50 dark:hover:bg-zinc-800/30 transition">
         <td class="p-3 text-gray-800 dark:text-gray-200" id="torque-row-${t.id}-component">${t.component}</td>
         <td class="p-3 font-bold text-accent" id="torque-row-${t.id}-torque">${t.torque}</td>
         <td class="p-3" id="torque-row-${t.id}-labels">${torqueLabelChipsHtml(t.labels)}</td>
-        ${adminCells}
+        ${adminViewCell}
+    </tr>
+    <tr id="torque-edit-row-${t.id}" class="hidden border-b border-blue-100 dark:border-blue-900/40 bg-blue-50/60 dark:bg-blue-900/10">
+        <td class="p-2"><input type="text" id="torque-edit-component-${t.id}" class="w-full text-sm border border-gray-300 dark:border-zinc-600 rounded-lg px-2 py-1.5 bg-white dark:bg-zinc-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-accent/50" placeholder="Component / Bolt"></td>
+        <td class="p-2"><input type="text" id="torque-edit-torque-${t.id}" class="w-full text-sm border border-gray-300 dark:border-zinc-600 rounded-lg px-2 py-1.5 bg-white dark:bg-zinc-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-accent/50" placeholder="e.g. 100 ft-lbs"></td>
+        <td class="p-2"><div id="torque-edit-chip-${t.id}" class="label-chip-widget"></div></td>
+        ${adminEditCell}
     </tr>`;
 }
 
@@ -473,30 +475,46 @@ async function deleteSpecsTorque(id) {
     }
 }
 
-function openEditTorque(id, torqueObj) {
-    // If called from a Jinja-rendered button, torqueObj may be undefined.
-    // In that case, read from the data-torque attribute on the clicked button.
-    if (!torqueObj) {
-        const btn = document.querySelector(`button[onclick*="openEditTorque('${id}')"][data-torque]`);
-        if (btn) {
-            try { torqueObj = JSON.parse(btn.dataset.torque); } catch(e) { torqueObj = {}; }
-        } else {
-            torqueObj = {};
-        }
+function openEditTorque(id) {
+    // Read stored data directly from the view row's data-* attributes
+    const viewRow = document.getElementById(`torque-row-${id}`);
+    const component = viewRow ? viewRow.dataset.component || '' : '';
+    const torque    = viewRow ? viewRow.dataset.torque    || '' : '';
+    const labels    = viewRow ? viewRow.dataset.labels    || '' : '';
+
+    // Populate the inline edit row fields with current values
+    const compInput = document.getElementById(`torque-edit-component-${id}`);
+    const torqInput = document.getElementById(`torque-edit-torque-${id}`);
+    if (compInput) compInput.value = component;
+    if (torqInput) torqInput.value = torque;
+
+    // Init chip widget for this row if not already done, then set labels
+    const chipEl = document.getElementById(`torque-edit-chip-${id}`);
+    if (chipEl && !chipEl._chipWidget) {
+        createChipWidget(chipEl, '');
     }
-    document.getElementById('edit-torque-id').value = id;
-    document.getElementById('edit-torque-component').value = torqueObj.component || '';
-    document.getElementById('edit-torque-value').value = torqueObj.torque || '';
-    const widget = document.getElementById('edit-torque-chip-widget')._chipWidget;
-    if (widget) widget.setLabels(torqueObj.labels || '');
-    document.getElementById('edit-torque-modal').classList.remove('hidden');
+    if (chipEl && chipEl._chipWidget) {
+        chipEl._chipWidget.setLabels(labels);
+    }
+
+    // Show the edit row, hide the view row
+    document.getElementById(`torque-row-${id}`).classList.add('hidden');
+    document.getElementById(`torque-edit-row-${id}`).classList.remove('hidden');
+    if (compInput) compInput.focus();
 }
 
-async function saveEditTorque() {
-    const id = document.getElementById('edit-torque-id').value;
-    const component = document.getElementById('edit-torque-component').value.trim();
-    const torqueVal = document.getElementById('edit-torque-value').value.trim();
-    const labels = document.getElementById('edit-torque-chip-widget')._chipWidget?.getValue() || '';
+function cancelInlineEditTorque(id) {
+    document.getElementById(`torque-edit-row-${id}`).classList.add('hidden');
+    document.getElementById(`torque-row-${id}`).classList.remove('hidden');
+}
+
+async function saveInlineEditTorque(id) {
+    const viewRow = document.getElementById(`torque-row-${id}`);
+    const component = document.getElementById(`torque-edit-component-${id}`).value.trim();
+    const torqueVal = document.getElementById(`torque-edit-torque-${id}`).value.trim();
+    const chipEl = document.getElementById(`torque-edit-chip-${id}`);
+    const labels = chipEl?._chipWidget?.getValue() || '';
+
     if (!component || !torqueVal) { alert('Component and Torque Spec are required.'); return; }
 
     const formData = new FormData();
@@ -507,13 +525,20 @@ async function saveEditTorque() {
     const res = await fetch('{{ ingress_path }}/api/{{ current_vin }}/update_torque/' + id, { method: 'POST', body: formData, headers: { 'Accept': 'application/json' } });
     const data = await res.json();
     if (data.status === 'success') {
-        // Update row cells in place
+        // Update view row cells
         const compEl = document.getElementById(`torque-row-${id}-component`);
         const torqEl = document.getElementById(`torque-row-${id}-torque`);
-        const lblEl = document.getElementById(`torque-row-${id}-labels`);
+        const lblEl  = document.getElementById(`torque-row-${id}-labels`);
         if (compEl) compEl.textContent = component;
         if (torqEl) torqEl.textContent = torqueVal;
-        if (lblEl) lblEl.innerHTML = torqueLabelChipsHtml(labels);
+        if (lblEl)  lblEl.innerHTML = torqueLabelChipsHtml(labels);
+
+        // Update the view row's data-* attributes so re-opening edit reflects new values
+        if (viewRow) {
+            viewRow.dataset.component = component;
+            viewRow.dataset.torque    = torqueVal;
+            viewRow.dataset.labels    = labels;
+        }
 
         // Sync global-torque-data
         try {
@@ -523,7 +548,9 @@ async function saveEditTorque() {
             document.getElementById('global-torque-data').textContent = JSON.stringify(gt);
         } catch(e) {}
 
-        document.getElementById('edit-torque-modal').classList.add('hidden');
+        // Hide edit row, show view row
+        document.getElementById(`torque-edit-row-${id}`).classList.add('hidden');
+        document.getElementById(`torque-row-${id}`).classList.remove('hidden');
     } else {
         alert('Could not save changes.');
     }
