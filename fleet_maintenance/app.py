@@ -205,21 +205,28 @@ def delete_torque(vin, t_id):
 @app.route('/api/<vin>/service/<service_id>/add_garage_item', methods=['POST'])
 def add_garage_item(vin, service_id):
     db = load_db()
-    item_type = request.form.get("type") 
+    raw_type = request.form.get("type", "").strip().lower()
+    # Normalize so both "part" and "parts" map to the correct "garage_parts" key
+    item_type = raw_type.rstrip("s")  # "parts"->"part", "torque"->"torque", "part"->"part"
     name = request.form.get("name", "").strip()
     value = request.form.get("value", "").strip()
     new_id = str(uuid.uuid4())[:8]
-    
-    if name and value and vin in db.get("vehicles", {}):
+    saved = False
+
+    if name and value and item_type and vin in db.get("vehicles", {}):
         for s in db["vehicles"][vin].get("services", []):
             if s["id"] == service_id:
-                target_list = s.setdefault(f"garage_{item_type}", [])
+                target_list = s.setdefault(f"garage_{item_type}s", [])
                 target_list.append({"id": new_id, "name": name, "value": value})
+                saved = True
                 break
-        save_db(db, sync_mqtt=False)
-        
+        if saved:
+            save_db(db, sync_mqtt=False)
+
     if request.headers.get('Accept') == 'application/json':
-        return jsonify({"status": "success", "id": new_id})
+        if saved:
+            return jsonify({"status": "success", "id": new_id})
+        return jsonify({"status": "error", "message": "Item could not be saved"}), 400
     return redirect(request.headers.get("Referer", f"{get_base_path()}/vehicle/{vin}"))
 
 @app.route('/api/<vin>/service/<service_id>/delete_garage_item/<item_type>/<item_id>', methods=['POST'])

@@ -136,6 +136,12 @@
 
             renderGarageLists(s, isAdmin);
 
+            // Always reset add forms when opening any service
+            const _pf = document.getElementById('sd-add-part-form');
+            const _tf = document.getElementById('sd-add-torque-form');
+            _pf.reset(); _pf.classList.add('hidden');
+            _tf.reset(); _tf.classList.add('hidden');
+
             if (isAdmin) {
                 document.getElementById('sd-add-part-form').action = `{{ ingress_path }}/api/${vin}/service/${s.id}/add_garage_item`;
                 document.getElementById('sd-add-torque-form').action = `{{ ingress_path }}/api/${vin}/add_torque`;
@@ -216,15 +222,26 @@
         async function submitGaragePart(e) {
             e.preventDefault();
             const form = e.target;
-            const formData = new FormData(form);
-            const res = await fetch(form.action, { method: 'POST', body: formData, headers: { 'Accept': 'application/json' } });
-            const data = await res.json();
-            if (data.status === 'success') {
-                const html = garagePartHtml(data.id, formData.get('name'), formData.get('value'), true);
-                const list = document.getElementById('sd-parts-list');
-                const noData = list.querySelector('.no-data'); if (noData) noData.remove();
-                list.insertAdjacentHTML('beforeend', html);
-                form.reset(); form.classList.add('hidden');
+            const btn = form.querySelector('button[type="submit"]');
+            const origText = btn.textContent;
+            btn.disabled = true; btn.textContent = 'Saving...';
+            try {
+                const formData = new FormData(form);
+                const res = await fetch(form.action, { method: 'POST', body: formData, headers: { 'Accept': 'application/json' } });
+                const data = await res.json();
+                if (data.status === 'success') {
+                    const html = garagePartHtml(data.id, formData.get('name'), formData.get('value'), true);
+                    const list = document.getElementById('sd-parts-list');
+                    const noData = list.querySelector('.no-data'); if (noData) noData.remove();
+                    list.insertAdjacentHTML('beforeend', html);
+                    form.reset(); form.classList.add('hidden');
+                } else {
+                    alert('Could not save part. Please try again.');
+                }
+            } catch(err) {
+                alert('Network error. Please try again.');
+            } finally {
+                btn.disabled = false; btn.textContent = origText;
             }
         }
 
@@ -318,7 +335,14 @@
             }, 3000);
         }
 
-        function closeServiceDetails() { document.getElementById('service-details-modal').classList.add('hidden'); }
+        function closeServiceDetails() {
+            document.getElementById('service-details-modal').classList.add('hidden');
+            // Reset and hide the add forms so they don't persist on next open
+            const partForm = document.getElementById('sd-add-part-form');
+            const torqueForm = document.getElementById('sd-add-torque-form');
+            partForm.reset(); partForm.classList.add('hidden');
+            torqueForm.reset(); torqueForm.classList.add('hidden');
+        }
 
         document.addEventListener('DOMContentLoaded', () => {
             try {
