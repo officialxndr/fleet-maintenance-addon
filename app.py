@@ -1,6 +1,7 @@
 from flask import Flask, request, jsonify, render_template, redirect, Response, send_from_directory
 import csv
 import uuid
+import requests  # <--- ADD THIS LINE
 from datetime import datetime
 from io import StringIO
 from core import load_db, save_db, calculate_status, calculate_fuel_stats, calculate_adm, get_ha_sensors, parse_date, mqtt_client

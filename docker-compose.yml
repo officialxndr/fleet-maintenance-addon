@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   fleet-maintenance:
-    image: ghcr.io/your-github-name/fleet-maintenance:latest
+    image: ghcr.io/officialxndr/fleet-maintenance:latest
     container_name: fleet-maintenance
     build: .
     restart: unless-stopped
@@ -13,7 +13,7 @@ services:
       - ./data:/app/data
     environment:
       # Standalone users can configure HA / MQTT by changing these!
-      - HA_URL=http://192.168.1.100:8123
+      - HA_URL=http://homeassistant.local:8123
       - HA_TOKEN=paste_long_lived_token_here
       - MQTT_BROKER=192.168.1.100
       - MQTT_PORT=1883
