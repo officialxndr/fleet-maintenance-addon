@@ -83,7 +83,7 @@
                             </td>
                             <td class="p-3 text-center admin-only">
                                 <div class="flex items-center justify-center gap-2">
-                                    <button type="button" onclick="openEditTorque('{{ t.id }}', {{ t | tojson | safe }})" class="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-800/50 border border-blue-200 dark:border-blue-700 px-2.5 py-1 rounded transition" title="Edit">Edit</button>
+                                    <button type="button" onclick="openEditTorque('{{ t.id }}')" data-torque="{{ t | tojson | e }}" class="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-800/50 border border-blue-200 dark:border-blue-700 px-2.5 py-1 rounded transition" title="Edit">Edit</button>
                                     <button type="button" onclick="deleteSpecsTorque('{{ t.id }}')" class="inline-flex items-center gap-1 text-xs font-semibold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30 hover:bg-red-100 dark:hover:bg-red-800/50 border border-red-200 dark:border-red-700 px-2.5 py-1 rounded transition" title="Delete">Delete</button>
                                 </div>
                             </td>
@@ -474,6 +474,16 @@ async function deleteSpecsTorque(id) {
 }
 
 function openEditTorque(id, torqueObj) {
+    // If called from a Jinja-rendered button, torqueObj may be undefined.
+    // In that case, read from the data-torque attribute on the clicked button.
+    if (!torqueObj) {
+        const btn = document.querySelector(`button[onclick*="openEditTorque('${id}')"][data-torque]`);
+        if (btn) {
+            try { torqueObj = JSON.parse(btn.dataset.torque); } catch(e) { torqueObj = {}; }
+        } else {
+            torqueObj = {};
+        }
+    }
     document.getElementById('edit-torque-id').value = id;
     document.getElementById('edit-torque-component').value = torqueObj.component || '';
     document.getElementById('edit-torque-value').value = torqueObj.torque || '';
