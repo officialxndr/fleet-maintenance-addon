@@ -27,9 +27,7 @@
             </div>
             
             <div class="flex gap-2 mt-4 md:mt-0 admin-only">
-                
                 <button id="copy_btn_torque" onclick="copyPrompt('torque')" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs py-1.5 px-3 rounded shadow font-bold transition whitespace-nowrap">📋 Copy AI Prompt</button>
-                
                 <form action="{{ ingress_path }}/api/{{ current_vin }}/import_torque_csv" method="POST" enctype="multipart/form-data" class="flex gap-2 items-center border border-indigo-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 p-1 rounded shadow-sm">
                     <input type="file" name="csv_file" accept=".csv" required class="text-xs w-full md:w-32 p-1 dark:text-gray-300">
                     <button type="submit" class="bg-accent text-white text-xs py-1 px-3 rounded shadow font-bold transition whitespace-nowrap">Import</button>
@@ -37,48 +35,487 @@
             </div>
         </div>
 
+        <!-- Add Torque Form (with label chip input) -->
         <div class="bg-gray-50 dark:bg-zinc-800/50 p-4 rounded-lg border dark:border-zinc-800 mb-5 shadow-sm admin-only">
-            <form action="{{ ingress_path }}/api/{{ current_vin }}/add_torque" method="POST" class="flex flex-col md:flex-row flex-wrap gap-3 items-end">
+            <div class="flex flex-col md:flex-row flex-wrap gap-3 items-end">
                 <div class="flex-1 w-full min-w-[200px]">
                     <label class="block text-[10px] text-gray-500 font-bold uppercase mb-1">Component</label>
-                    <input type="text" name="component" placeholder="e.g. Lug Nuts" required class="text-sm border dark:border-zinc-700 rounded p-2 w-full bg-white dark:bg-zinc-900 dark:text-white focus-ring-accent">
+                    <input type="text" id="add-torque-component" placeholder="e.g. Lug Nuts" required class="text-sm border dark:border-zinc-700 rounded p-2 w-full bg-white dark:bg-zinc-900 dark:text-white focus-ring-accent">
                 </div>
                 <div class="flex-1 w-full min-w-[150px]">
                     <label class="block text-[10px] text-gray-500 font-bold uppercase mb-1">Torque Spec</label>
-                    <input type="text" name="torque" placeholder="e.g. 100 ft-lbs" required class="text-sm border dark:border-zinc-700 rounded p-2 w-full bg-white dark:bg-zinc-900 dark:text-white focus-ring-accent">
+                    <input type="text" id="add-torque-value" placeholder="e.g. 100 ft-lbs" required class="text-sm border dark:border-zinc-700 rounded p-2 w-full bg-white dark:bg-zinc-900 dark:text-white focus-ring-accent">
                 </div>
-                <div class="flex-1 w-full min-w-[150px]">
-                    <label class="block text-[10px] text-gray-500 font-bold uppercase mb-1">Labels (Comma Separated)</label>
-                    <input type="text" name="labels" placeholder="e.g. Oil, Tire Rotation" class="text-sm border dark:border-zinc-700 rounded p-2 w-full bg-white dark:bg-zinc-900 dark:text-white focus-ring-accent">
+                <div class="flex-1 w-full min-w-[200px]">
+                    <label class="block text-[10px] text-gray-500 font-bold uppercase mb-1">Auto-Link Labels</label>
+                    <div id="add-torque-chip-widget" class="label-chip-widget"></div>
                 </div>
-                <button type="submit" class="bg-gray-800 dark:bg-zinc-700 hover:bg-gray-900 text-white font-medium text-sm py-2 px-6 rounded shadow h-[38px] w-full md:w-auto">+ Add Spec</button>
-            </form>
+                <button type="button" onclick="submitSpecsTorque()" class="bg-gray-800 dark:bg-zinc-700 hover:bg-gray-900 text-white font-medium text-sm py-2 px-6 rounded shadow h-[38px] w-full md:w-auto">+ Add Spec</button>
+            </div>
         </div>
 
+        <!-- Torque Specs Table -->
         <div class="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-lg shadow-sm overflow-hidden">
             <table class="w-full text-sm text-left">
                 <thead class="bg-gray-100 dark:bg-zinc-800 text-gray-600 dark:text-gray-300 uppercase text-[10px] font-bold tracking-wide">
-                    <tr><th class="p-3 border-b dark:border-zinc-700">Component</th><th class="p-3 border-b dark:border-zinc-700">Torque Spec</th><th class="p-3 border-b dark:border-zinc-700">Auto-Link Labels</th><th class="p-3 border-b dark:border-zinc-700 w-16 admin-only text-center">Action</th></tr>
+                    <tr>
+                        <th class="p-3 border-b dark:border-zinc-700">Component</th>
+                        <th class="p-3 border-b dark:border-zinc-700">Torque Spec</th>
+                        <th class="p-3 border-b dark:border-zinc-700">Auto-Link Labels</th>
+                        <th class="p-3 border-b dark:border-zinc-700 w-24 admin-only text-center">Actions</th>
+                    </tr>
                 </thead>
-                <tbody>
+                <tbody id="torque-specs-tbody">
                     {% if vehicle_data.torque_specs %}
                         {% for t in vehicle_data.torque_specs %}
-                        <tr class="border-b border-gray-100 dark:border-zinc-800 last:border-0 hover:bg-gray-50 dark:hover:bg-zinc-800/30 transition">
-                            <td class="p-3 text-gray-800 dark:text-gray-200">{{ t.component }}</td>
-                            <td class="p-3 font-bold text-accent">{{ t.torque }}</td>
-                            <td class="p-3 text-gray-500 text-xs italic">{{ t.labels or '-' }}</td>
+                        <tr id="torque-row-{{ t.id }}" class="border-b border-gray-100 dark:border-zinc-800 last:border-0 hover:bg-gray-50 dark:hover:bg-zinc-800/30 transition">
+                            <td class="p-3 text-gray-800 dark:text-gray-200" id="torque-row-{{ t.id }}-component">{{ t.component }}</td>
+                            <td class="p-3 font-bold text-accent" id="torque-row-{{ t.id }}-torque">{{ t.torque }}</td>
+                            <td class="p-3" id="torque-row-{{ t.id }}-labels">
+                                {% if t.labels %}
+                                    {% for lbl in t.labels.split(',') %}
+                                        {% set lbl = lbl.strip() %}
+                                        {% if lbl %}<span class="inline-block bg-accent/10 text-accent border border-accent/20 text-[11px] font-semibold px-2 py-0.5 rounded-full mr-1 mb-1">{{ lbl }}</span>{% endif %}
+                                    {% endfor %}
+                                {% else %}
+                                    <span class="text-gray-400 italic text-xs">—</span>
+                                {% endif %}
+                            </td>
                             <td class="p-3 text-center admin-only">
-                                <form action="{{ ingress_path }}/api/{{ current_vin }}/delete_torque/{{ t.id }}" method="POST" onsubmit="return confirm('Remove torque spec?');">
-                                    <button type="submit" class="text-red-500 hover:text-red-700 transition" title="Delete">🗑️</button>
-                                </form>
+                                <div class="flex items-center justify-center gap-2">
+                                    <button type="button" onclick="openEditTorque('{{ t.id }}', {{ t | tojson | safe }})" class="text-blue-500 hover:text-blue-700 transition" title="Edit">✏️</button>
+                                    <button type="button" onclick="deleteSpecsTorque('{{ t.id }}')" class="text-red-500 hover:text-red-700 transition" title="Delete">🗑️</button>
+                                </div>
                             </td>
                         </tr>
                         {% endfor %}
                     {% else %}
-                        <tr><td colspan="4" class="p-6 text-center text-gray-400 italic">No torque specifications added yet.</td></tr>
+                        <tr id="torque-empty-row"><td colspan="4" class="p-6 text-center text-gray-400 italic">No torque specifications added yet.</td></tr>
                     {% endif %}
                 </tbody>
             </table>
         </div>
     </div>
 </div>
+
+<!-- Edit Torque Modal -->
+<div id="edit-torque-modal" class="hidden fixed inset-0 bg-black/60 z-[110] flex items-center justify-center p-4 backdrop-blur-sm">
+    <div class="bg-white dark:bg-zinc-900 rounded-xl shadow-2xl p-6 w-full max-w-lg relative">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-bold text-gray-800 dark:text-white">Edit Torque Spec</h3>
+            <button onclick="document.getElementById('edit-torque-modal').classList.add('hidden')" class="text-gray-400 hover:text-gray-600 dark:hover:text-white text-xl font-bold">✕</button>
+        </div>
+        <input type="hidden" id="edit-torque-id">
+        <div class="space-y-4">
+            <div>
+                <label class="block text-[10px] font-bold text-gray-500 dark:text-zinc-400 uppercase tracking-wide mb-1">Component / Bolt</label>
+                <input type="text" id="edit-torque-component" class="w-full text-sm border dark:border-zinc-700 rounded-lg p-2 bg-gray-50 dark:bg-zinc-800 dark:text-white focus-ring-accent">
+            </div>
+            <div>
+                <label class="block text-[10px] font-bold text-gray-500 dark:text-zinc-400 uppercase tracking-wide mb-1">Torque Value</label>
+                <input type="text" id="edit-torque-value" class="w-full text-sm border dark:border-zinc-700 rounded-lg p-2 bg-gray-50 dark:bg-zinc-800 dark:text-white focus-ring-accent">
+            </div>
+            <div>
+                <label class="block text-[10px] font-bold text-gray-500 dark:text-zinc-400 uppercase tracking-wide mb-1">Auto-Link Labels</label>
+                <div id="edit-torque-chip-widget" class="label-chip-widget"></div>
+            </div>
+        </div>
+        <div class="flex gap-3 mt-6 pt-4 border-t border-gray-200 dark:border-zinc-800">
+            <button type="button" onclick="saveEditTorque()" class="flex-1 bg-accent hover:brightness-90 text-white font-bold py-2 px-4 rounded-lg shadow-sm transition">Save Changes</button>
+            <button type="button" onclick="document.getElementById('edit-torque-modal').classList.add('hidden')" class="flex-1 bg-gray-200 dark:bg-zinc-700 text-gray-800 dark:text-gray-200 font-bold py-2 px-4 rounded-lg transition">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<style>
+.label-chip-widget {
+    min-height: 38px;
+    border: 1px solid #d1d5db;
+    border-radius: 0.5rem;
+    padding: 4px 8px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px;
+    background: white;
+    cursor: text;
+    position: relative;
+}
+.dark .label-chip-widget {
+    background: #18181b;
+    border-color: #3f3f46;
+}
+.label-chip-widget:focus-within {
+    outline: 2px solid var(--color-accent, #2563eb);
+    outline-offset: 1px;
+}
+.label-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: color-mix(in srgb, var(--color-accent, #2563eb) 12%, transparent);
+    color: var(--color-accent, #2563eb);
+    border: 1px solid color-mix(in srgb, var(--color-accent, #2563eb) 25%, transparent);
+    border-radius: 999px;
+    padding: 2px 8px 2px 10px;
+    font-size: 11px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+.label-chip button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: inherit;
+    opacity: 0.6;
+    font-size: 13px;
+    line-height: 1;
+    padding: 0;
+    display: flex;
+    align-items: center;
+}
+.label-chip button:hover { opacity: 1; }
+.chip-input {
+    border: none !important;
+    outline: none !important;
+    background: transparent !important;
+    font-size: 13px;
+    min-width: 80px;
+    flex: 1;
+    color: inherit;
+    padding: 2px 4px;
+}
+.chip-autocomplete {
+    position: absolute;
+    top: 100%;
+    left: 0; right: 0;
+    background: white;
+    border: 1px solid #d1d5db;
+    border-radius: 0.5rem;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+    z-index: 200;
+    max-height: 180px;
+    overflow-y: auto;
+    margin-top: 2px;
+}
+.dark .chip-autocomplete {
+    background: #27272a;
+    border-color: #3f3f46;
+}
+.chip-autocomplete-item {
+    padding: 8px 12px;
+    font-size: 13px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.chip-autocomplete-item:hover, .chip-autocomplete-item.active {
+    background: color-mix(in srgb, var(--color-accent, #2563eb) 10%, transparent);
+    color: var(--color-accent, #2563eb);
+}
+.chip-autocomplete-item .match-highlight {
+    font-weight: 700;
+}
+.chip-ghost {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 13px;
+    color: #9ca3af;
+    pointer-events: none;
+    white-space: nowrap;
+    overflow: hidden;
+}
+</style>
+
+<script>
+// ==========================================
+// LABEL CHIP INPUT WIDGET
+// ==========================================
+
+const _serviceNames = JSON.parse('{{ vehicle_data.services | map(attribute="name") | list | tojson | safe if vehicle_data else "[]" }}');
+
+function createChipWidget(container, initialLabels) {
+    container.innerHTML = '';
+    const state = { chips: [], activeDropdownIdx: -1 };
+
+    // Parse initial labels
+    if (initialLabels) {
+        initialLabels.split(',').map(l => l.trim()).filter(Boolean).forEach(l => addChip(l));
+    }
+
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'chip-input';
+    input.placeholder = state.chips.length === 0 ? 'Type to search services…' : '';
+    input.autocomplete = 'off';
+    input.spellcheck = false;
+
+    const ghost = document.createElement('span');
+    ghost.className = 'chip-ghost';
+
+    const dropdown = document.createElement('div');
+    dropdown.className = 'chip-autocomplete hidden';
+
+    container.appendChild(input);
+    container.appendChild(ghost);
+    container.appendChild(dropdown);
+    container.addEventListener('click', () => input.focus());
+
+    function getChipsValue() {
+        return state.chips.join(', ');
+    }
+
+    function addChip(label) {
+        label = label.trim();
+        if (!label || state.chips.includes(label)) return;
+        state.chips.push(label);
+        renderChips();
+    }
+
+    function removeChip(label) {
+        state.chips = state.chips.filter(c => c !== label);
+        renderChips();
+    }
+
+    function renderChips() {
+        // Remove existing chips
+        container.querySelectorAll('.label-chip').forEach(el => el.remove());
+        state.chips.forEach(label => {
+            const chip = document.createElement('span');
+            chip.className = 'label-chip';
+            chip.innerHTML = `${label}<button type="button" aria-label="Remove ${label}">×</button>`;
+            chip.querySelector('button').addEventListener('click', (e) => {
+                e.stopPropagation();
+                removeChip(label);
+            });
+            container.insertBefore(chip, input);
+        });
+        input.placeholder = state.chips.length === 0 ? 'Type to search services…' : '';
+        updateGhost();
+    }
+
+    function getSuggestions(query) {
+        if (!query) return [];
+        const q = query.toLowerCase();
+        const used = new Set(state.chips.map(c => c.toLowerCase()));
+        return _serviceNames.filter(n => n.toLowerCase().includes(q) && !used.has(n.toLowerCase()));
+    }
+
+    let ghostSuggestion = '';
+    function updateGhost() {
+        const val = input.value;
+        if (!val) { ghost.textContent = ''; ghostSuggestion = ''; return; }
+        const suggs = getSuggestions(val);
+        if (suggs.length > 0 && suggs[0].toLowerCase().startsWith(val.toLowerCase())) {
+            ghostSuggestion = suggs[0];
+            ghost.textContent = suggs[0].slice(val.length);
+        } else {
+            ghostSuggestion = '';
+            ghost.textContent = '';
+        }
+    }
+
+    function showDropdown(query) {
+        const suggs = getSuggestions(query);
+        state.activeDropdownIdx = -1;
+        if (!suggs.length) { dropdown.classList.add('hidden'); return; }
+        dropdown.innerHTML = '';
+        suggs.forEach((s, i) => {
+            const item = document.createElement('div');
+            item.className = 'chip-autocomplete-item';
+            const qLow = query.toLowerCase();
+            const idx = s.toLowerCase().indexOf(qLow);
+            item.innerHTML = idx >= 0
+                ? s.slice(0, idx) + `<span class="match-highlight">${s.slice(idx, idx + query.length)}</span>` + s.slice(idx + query.length)
+                : s;
+            item.addEventListener('mousedown', (e) => { e.preventDefault(); addChip(s); input.value = ''; ghost.textContent = ''; hideDropdown(); input.focus(); });
+            dropdown.appendChild(item);
+        });
+        dropdown.classList.remove('hidden');
+    }
+
+    function hideDropdown() { dropdown.classList.add('hidden'); state.activeDropdownIdx = -1; }
+
+    input.addEventListener('input', () => {
+        updateGhost();
+        showDropdown(input.value);
+    });
+
+    input.addEventListener('keydown', (e) => {
+        const items = dropdown.querySelectorAll('.chip-autocomplete-item');
+        if (e.key === 'Tab' || e.key === 'Enter') {
+            e.preventDefault();
+            if (state.activeDropdownIdx >= 0 && items[state.activeDropdownIdx]) {
+                addChip(items[state.activeDropdownIdx].textContent);
+            } else if (ghostSuggestion) {
+                addChip(ghostSuggestion);
+            } else if (input.value.trim()) {
+                addChip(input.value.trim());
+            }
+            input.value = ''; ghost.textContent = ''; hideDropdown();
+        } else if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            state.activeDropdownIdx = Math.min(state.activeDropdownIdx + 1, items.length - 1);
+            items.forEach((it, i) => it.classList.toggle('active', i === state.activeDropdownIdx));
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            state.activeDropdownIdx = Math.max(state.activeDropdownIdx - 1, -1);
+            items.forEach((it, i) => it.classList.toggle('active', i === state.activeDropdownIdx));
+        } else if (e.key === 'Backspace' && !input.value && state.chips.length > 0) {
+            removeChip(state.chips[state.chips.length - 1]);
+        } else if (e.key === ',') {
+            e.preventDefault();
+            if (input.value.trim()) { addChip(input.value.trim()); input.value = ''; hideDropdown(); ghost.textContent = ''; }
+        }
+    });
+
+    input.addEventListener('blur', () => {
+        setTimeout(() => {
+            if (input.value.trim()) { addChip(input.value.trim()); input.value = ''; ghost.textContent = ''; }
+            hideDropdown();
+        }, 150);
+    });
+
+    // Expose getValue
+    container._chipWidget = { getValue: getChipsValue, reset: () => { state.chips = []; renderChips(); input.value = ''; ghost.textContent = ''; hideDropdown(); }, setLabels: (labels) => { state.chips = []; renderChips(); if (labels) labels.split(',').map(l => l.trim()).filter(Boolean).forEach(l => addChip(l)); } };
+}
+
+// Init widgets on DOM ready
+document.addEventListener('DOMContentLoaded', () => {
+    createChipWidget(document.getElementById('add-torque-chip-widget'), '');
+    createChipWidget(document.getElementById('edit-torque-chip-widget'), '');
+});
+
+// ==========================================
+// TORQUE SPECS TABLE — LIVE ADD / EDIT / DELETE
+// ==========================================
+
+function torqueLabelChipsHtml(labels) {
+    if (!labels || !labels.trim()) return '<span class="text-gray-400 italic text-xs">—</span>';
+    return labels.split(',').map(l => l.trim()).filter(Boolean)
+        .map(l => `<span class="inline-block bg-accent/10 text-accent border border-accent/20 text-[11px] font-semibold px-2 py-0.5 rounded-full mr-1 mb-1">${l}</span>`)
+        .join('');
+}
+
+function buildTorqueRow(t, isAdmin) {
+    const adminCells = isAdmin
+        ? `<td class="p-3 text-center admin-only"><div class="flex items-center justify-center gap-2">
+              <button type="button" onclick="openEditTorque('${t.id}', ${JSON.stringify(t).replace(/'/g, "&#39;")})" class="text-blue-500 hover:text-blue-700 transition" title="Edit">✏️</button>
+              <button type="button" onclick="deleteSpecsTorque('${t.id}')" class="text-red-500 hover:text-red-700 transition" title="Delete">🗑️</button>
+           </div></td>`
+        : '<td class="p-3 text-center admin-only"></td>';
+    return `<tr id="torque-row-${t.id}" class="border-b border-gray-100 dark:border-zinc-800 last:border-0 hover:bg-gray-50 dark:hover:bg-zinc-800/30 transition">
+        <td class="p-3 text-gray-800 dark:text-gray-200" id="torque-row-${t.id}-component">${t.component}</td>
+        <td class="p-3 font-bold text-accent" id="torque-row-${t.id}-torque">${t.torque}</td>
+        <td class="p-3" id="torque-row-${t.id}-labels">${torqueLabelChipsHtml(t.labels)}</td>
+        ${adminCells}
+    </tr>`;
+}
+
+async function submitSpecsTorque() {
+    const component = document.getElementById('add-torque-component').value.trim();
+    const torqueVal = document.getElementById('add-torque-value').value.trim();
+    const labels = document.getElementById('add-torque-chip-widget')._chipWidget?.getValue() || '';
+    if (!component || !torqueVal) { alert('Component and Torque Spec are required.'); return; }
+
+    const formData = new FormData();
+    formData.append('component', component);
+    formData.append('torque', torqueVal);
+    formData.append('labels', labels);
+
+    const res = await fetch('{{ ingress_path }}/api/{{ current_vin }}/add_torque', { method: 'POST', body: formData, headers: { 'Accept': 'application/json' } });
+    const data = await res.json();
+    if (data.status === 'success') {
+        // Clear form
+        document.getElementById('add-torque-component').value = '';
+        document.getElementById('add-torque-value').value = '';
+        document.getElementById('add-torque-chip-widget')._chipWidget.reset();
+
+        // Remove empty state row if present
+        const emptyRow = document.getElementById('torque-empty-row');
+        if (emptyRow) emptyRow.remove();
+
+        // Inject new row
+        const tbody = document.getElementById('torque-specs-tbody');
+        tbody.insertAdjacentHTML('beforeend', buildTorqueRow({ id: data.id, component: data.component, torque: data.torque, labels: data.labels }, true));
+
+        // Sync global-torque-data
+        try {
+            const gt = JSON.parse(document.getElementById('global-torque-data').textContent);
+            gt.push({ id: data.id, component: data.component, torque: data.torque, labels: data.labels });
+            document.getElementById('global-torque-data').textContent = JSON.stringify(gt);
+        } catch(e) {}
+    } else {
+        alert('Could not save torque spec.');
+    }
+}
+
+async function deleteSpecsTorque(id) {
+    if (!confirm('Remove torque spec?')) return;
+    const res = await fetch('{{ ingress_path }}/api/{{ current_vin }}/delete_torque/' + id, { method: 'POST', headers: { 'Accept': 'application/json' } });
+    const data = await res.json();
+    if (data.status === 'success') {
+        const row = document.getElementById('torque-row-' + id);
+        if (row) row.remove();
+        // Show empty state if no rows left
+        const tbody = document.getElementById('torque-specs-tbody');
+        if (!tbody.querySelector('tr:not(#torque-empty-row)')) {
+            tbody.innerHTML = '<tr id="torque-empty-row"><td colspan="4" class="p-6 text-center text-gray-400 italic">No torque specifications added yet.</td></tr>';
+        }
+        // Sync global-torque-data
+        try {
+            const gt = JSON.parse(document.getElementById('global-torque-data').textContent);
+            document.getElementById('global-torque-data').textContent = JSON.stringify(gt.filter(t => t.id !== id));
+        } catch(e) {}
+    }
+}
+
+function openEditTorque(id, torqueObj) {
+    document.getElementById('edit-torque-id').value = id;
+    document.getElementById('edit-torque-component').value = torqueObj.component || '';
+    document.getElementById('edit-torque-value').value = torqueObj.torque || '';
+    const widget = document.getElementById('edit-torque-chip-widget')._chipWidget;
+    if (widget) widget.setLabels(torqueObj.labels || '');
+    document.getElementById('edit-torque-modal').classList.remove('hidden');
+}
+
+async function saveEditTorque() {
+    const id = document.getElementById('edit-torque-id').value;
+    const component = document.getElementById('edit-torque-component').value.trim();
+    const torqueVal = document.getElementById('edit-torque-value').value.trim();
+    const labels = document.getElementById('edit-torque-chip-widget')._chipWidget?.getValue() || '';
+    if (!component || !torqueVal) { alert('Component and Torque Spec are required.'); return; }
+
+    const formData = new FormData();
+    formData.append('component', component);
+    formData.append('torque', torqueVal);
+    formData.append('labels', labels);
+
+    const res = await fetch('{{ ingress_path }}/api/{{ current_vin }}/update_torque/' + id, { method: 'POST', body: formData, headers: { 'Accept': 'application/json' } });
+    const data = await res.json();
+    if (data.status === 'success') {
+        // Update row cells in place
+        const compEl = document.getElementById(`torque-row-${id}-component`);
+        const torqEl = document.getElementById(`torque-row-${id}-torque`);
+        const lblEl = document.getElementById(`torque-row-${id}-labels`);
+        if (compEl) compEl.textContent = component;
+        if (torqEl) torqEl.textContent = torqueVal;
+        if (lblEl) lblEl.innerHTML = torqueLabelChipsHtml(labels);
+
+        // Sync global-torque-data
+        try {
+            const gt = JSON.parse(document.getElementById('global-torque-data').textContent);
+            const idx = gt.findIndex(t => t.id === id);
+            if (idx >= 0) gt[idx] = { ...gt[idx], component, torque: torqueVal, labels };
+            document.getElementById('global-torque-data').textContent = JSON.stringify(gt);
+        } catch(e) {}
+
+        document.getElementById('edit-torque-modal').classList.add('hidden');
+    } else {
+        alert('Could not save changes.');
+    }
+}
+</script>

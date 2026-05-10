@@ -119,22 +119,41 @@
         let modalVin = '';
         let modalServiceId = '';
 
+        // Live cache for service data so garage items persist across modal open/close without reload
+        window._servicesCache = {};
+
+        function _syncServiceCacheFromDOM() {
+            document.querySelectorAll('[data-service]').forEach(btn => {
+                try {
+                    const s = JSON.parse(btn.dataset.service);
+                    if (s && s.id) window._servicesCache[s.id] = s;
+                } catch(e) {}
+            });
+        }
+
         function openServiceDetails(s, vin, isAdmin) {
             modalVin = vin;
             modalServiceId = s.id;
-            document.getElementById('sd-name').innerText = s.name;
-            document.getElementById('sd-category').innerText = s.category;
 
-            let last_fmt = s.last_service_date_formatted && s.last_service_date_formatted !== "None" ? `${s.last_service_date_formatted} <span class="text-gray-400 mx-1">|</span> ${s.last_service_miles} {{ global_settings.unit }}` : "Never Logged";
-            let due_fmt = s.due_date_str && s.due_date_str !== "TBD" ? `${s.due_date_str} <span class="text-gray-400 mx-1">|</span> ${s.due_miles} {{ global_settings.unit }}` : "TBD";
-            let rem_fmt = s.miles_remaining && s.miles_remaining !== "N/A" ? `${s.miles_remaining} {{ global_settings.unit }} <span class="text-gray-400 mx-1">|</span> ${s.months_remaining} mo` : "Log service to track";
+            // Always merge with live cache so garage items added this session are shown
+            if (!window._servicesCache[s.id]) {
+                window._servicesCache[s.id] = JSON.parse(JSON.stringify(s));
+            }
+            const live = window._servicesCache[s.id];
+
+            document.getElementById('sd-name').innerText = live.name;
+            document.getElementById('sd-category').innerText = live.category;
+
+            let last_fmt = live.last_service_date_formatted && live.last_service_date_formatted !== "None" ? `${live.last_service_date_formatted} <span class="text-gray-400 mx-1">|</span> ${live.last_service_miles} {{ global_settings.unit }}` : "Never Logged";
+            let due_fmt = live.due_date_str && live.due_date_str !== "TBD" ? `${live.due_date_str} <span class="text-gray-400 mx-1">|</span> ${live.due_miles} {{ global_settings.unit }}` : "TBD";
+            let rem_fmt = live.miles_remaining && live.miles_remaining !== "N/A" ? `${live.miles_remaining} {{ global_settings.unit }} <span class="text-gray-400 mx-1">|</span> ${live.months_remaining} mo` : "Log service to track";
 
             document.getElementById('sd-last').innerHTML = last_fmt;
             document.getElementById('sd-due').innerHTML = due_fmt;
             document.getElementById('sd-remain').innerHTML = rem_fmt;
-            document.getElementById('sd-status').innerText = s.status || "Unknown";
+            document.getElementById('sd-status').innerText = live.status || "Unknown";
 
-            renderGarageLists(s, isAdmin);
+            renderGarageLists(live, isAdmin);
 
             // Always reset add forms when opening any service
             const _pf = document.getElementById('sd-add-part-form');
@@ -143,9 +162,9 @@
             _tf.reset(); _tf.classList.add('hidden');
 
             if (isAdmin) {
-                document.getElementById('sd-add-part-form').action = `{{ ingress_path }}/api/${vin}/service/${s.id}/add_garage_item`;
+                document.getElementById('sd-add-part-form').action = `{{ ingress_path }}/api/${vin}/service/${live.id}/add_garage_item`;
                 document.getElementById('sd-add-torque-form').action = `{{ ingress_path }}/api/${vin}/add_torque`;
-                document.getElementById('sd-torque-labels').value = s.name;
+                document.getElementById('sd-torque-labels').value = live.name;
                 document.getElementById('btn-toggle-part').classList.remove('hidden');
                 document.getElementById('btn-toggle-torque').classList.remove('hidden');
             } else {
@@ -234,6 +253,11 @@
                     const list = document.getElementById('sd-parts-list');
                     const noData = list.querySelector('.no-data'); if (noData) noData.remove();
                     list.insertAdjacentHTML('beforeend', html);
+                    // Update live cache so reopening the modal shows the new item
+                    if (window._servicesCache[modalServiceId]) {
+                        window._servicesCache[modalServiceId].garage_parts = window._servicesCache[modalServiceId].garage_parts || [];
+                        window._servicesCache[modalServiceId].garage_parts.push({ id: data.id, name: formData.get('name'), value: formData.get('value') });
+                    }
                     form.reset(); form.classList.add('hidden');
                 } else {
                     alert('Could not save part. Please try again.');
@@ -256,6 +280,11 @@
                 const list = document.getElementById('sd-torque-list');
                 const noData = list.querySelector('.no-data'); if (noData) noData.remove();
                 list.insertAdjacentHTML('beforeend', html);
+                // Update live cache so reopening modal shows the new torque item
+                if (window._servicesCache[modalServiceId]) {
+                    window._servicesCache[modalServiceId].garage_torque = window._servicesCache[modalServiceId].garage_torque || [];
+                    window._servicesCache[modalServiceId].garage_torque.push({ id: data.id, name: formData.get('component'), value: formData.get('torque') });
+                }
                 form.reset(); form.classList.add('hidden');
 
                 try {
@@ -269,7 +298,15 @@
         async function deleteGarageItem(btn, itemId, type) {
             if (!confirm('Delete this item?')) return;
             const res = await fetch(`{{ ingress_path }}/api/${modalVin}/service/${modalServiceId}/delete_garage_item/${type}/${itemId}`, { method: 'POST', headers: { 'Accept': 'application/json' } });
-            if ((await res.json()).status === 'success') document.getElementById(`${type}-${itemId}`).remove();
+            if ((await res.json()).status === 'success') {
+                document.getElementById(`${type}-${itemId}`).remove();
+                // Update live cache
+                const svc = window._servicesCache[modalServiceId];
+                if (svc) {
+                    const key = `garage_${type}s`;
+                    if (svc[key]) svc[key] = svc[key].filter(i => i.id !== itemId);
+                }
+            }
         }
 
         async function deleteGlobalTorque(btn, torqueId) {
@@ -345,6 +382,9 @@
         }
 
         document.addEventListener('DOMContentLoaded', () => {
+            // Populate live services cache from rendered DOM
+            _syncServiceCacheFromDOM();
+
             try {
                 const savedTexture = localStorage.getItem('fleetBgTexture') || 'bg-pattern-solid';
                 document.body.classList.add(savedTexture);

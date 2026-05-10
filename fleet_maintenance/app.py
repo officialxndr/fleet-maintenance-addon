@@ -189,7 +189,7 @@ def add_torque(vin):
     
     # If the request comes from JS Fetch, return JSON so the modal doesn't close!
     if request.headers.get('Accept') == 'application/json':
-        return jsonify({"status": "success", "id": new_id})
+        return jsonify({"status": "success", "id": new_id, "component": request.form.get("component", "Unknown"), "torque": request.form.get("torque", ""), "labels": request.form.get("labels", "").strip()})
     return redirect(f"{get_base_path()}/vehicle/{vin}?tab=specs")
 
 @app.route('/api/<vin>/delete_torque/<t_id>', methods=['POST'])
@@ -198,6 +198,20 @@ def delete_torque(vin, t_id):
     db["vehicles"][vin]["torque_specs"] = [t for t in db["vehicles"][vin].get("torque_specs", []) if t.get("id") != t_id]
     save_db(db, sync_mqtt=False)
     
+    if request.headers.get('Accept') == 'application/json':
+        return jsonify({"status": "success"})
+    return redirect(f"{get_base_path()}/vehicle/{vin}?tab=specs")
+
+@app.route('/api/<vin>/update_torque/<t_id>', methods=['POST'])
+def update_torque(vin, t_id):
+    db = load_db()
+    for t in db["vehicles"][vin].get("torque_specs", []):
+        if t.get("id") == t_id:
+            t["component"] = request.form.get("component", t["component"])
+            t["torque"] = request.form.get("torque", t["torque"])
+            t["labels"] = request.form.get("labels", t.get("labels", "")).strip()
+            break
+    save_db(db, sync_mqtt=False)
     if request.headers.get('Accept') == 'application/json':
         return jsonify({"status": "success"})
     return redirect(f"{get_base_path()}/vehicle/{vin}?tab=specs")
