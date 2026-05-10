@@ -86,7 +86,7 @@
 </div>
 
 <div id="service-details-modal" class="hidden fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm transition-opacity">
-    <div class="bg-white dark:bg-zinc-900 rounded-xl shadow-2xl p-6 w-full max-w-lg relative max-h-[90vh] overflow-y-auto">
+    <div class="bg-white dark:bg-zinc-900 rounded-xl shadow-2xl p-6 w-full max-w-2xl relative max-h-[90vh] overflow-y-auto">
         <button onclick="closeServiceDetails()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 dark:hover:text-white text-xl font-bold">✕</button>
         
         <div class="mb-4 pr-6">
@@ -101,41 +101,70 @@
             <div><p class="text-[10px] uppercase font-bold text-gray-400 dark:text-zinc-500">Remaining</p><p id="sd-remain" class="font-bold text-accent">-</p></div>
         </div>
         
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 border-t border-gray-200 dark:border-zinc-800 pt-4">
-            
+        <div class="space-y-5 border-t border-gray-200 dark:border-zinc-800 pt-5">
+
+            <!-- Required Parts -->
             <div>
-                <div class="flex justify-between items-center mb-2">
-                    <p class="text-[10px] uppercase font-bold text-gray-400 dark:text-zinc-500">Required Parts</p>
-                    <button id="btn-toggle-part" class="admin-only text-[10px] font-bold text-accent hover:underline hidden" onclick="document.getElementById('sd-add-part-form').classList.toggle('hidden')">+ Add</button>
+                <div class="flex justify-between items-center mb-3">
+                    <div class="flex items-center gap-2">
+                        <span class="text-base">🔩</span>
+                        <p class="text-xs uppercase font-bold text-gray-500 dark:text-zinc-400 tracking-wider">Required Parts</p>
+                    </div>
+                    <button id="btn-toggle-part" class="admin-only hidden bg-gray-100 dark:bg-zinc-800 hover:bg-gray-200 dark:hover:bg-zinc-700 text-gray-700 dark:text-gray-300 text-xs font-bold py-1.5 px-3 rounded-lg border border-gray-200 dark:border-zinc-700 transition flex items-center gap-1" onclick="document.getElementById('sd-add-part-form').classList.toggle('hidden')">
+                        <span>＋</span> Add Part
+                    </button>
                 </div>
-                
-                <form id="sd-add-part-form" onsubmit="submitGaragePart(event)" class="hidden mb-3 flex gap-1 items-center bg-gray-50 dark:bg-zinc-800 p-2 rounded">
+
+                <form id="sd-add-part-form" onsubmit="submitGaragePart(event)" class="hidden mb-3 bg-gray-50 dark:bg-zinc-800/70 border border-gray-200 dark:border-zinc-700 rounded-xl p-4">
                     <input type="hidden" name="type" value="part">
-                    <input type="text" name="name" placeholder="Item" required class="text-[10px] border dark:border-zinc-700 rounded p-1 w-1/2 bg-white dark:bg-zinc-900 dark:text-white">
-                    <input type="text" name="value" placeholder="Spec" required class="text-[10px] border dark:border-zinc-700 rounded p-1 w-1/2 bg-white dark:bg-zinc-900 dark:text-white">
-                    <button type="submit" class="bg-gray-800 dark:bg-zinc-700 text-white text-[10px] px-2 py-1 rounded font-bold transition hover:bg-gray-900">✓</button>
+                    <p class="text-[10px] font-bold uppercase tracking-wide text-gray-400 dark:text-zinc-500 mb-3">New Part / Fluid</p>
+                    <div class="flex gap-3 items-end">
+                        <div class="flex-1">
+                            <label class="block text-[10px] font-bold text-gray-500 dark:text-zinc-400 uppercase tracking-wide mb-1">Item Name</label>
+                            <input type="text" name="name" placeholder="e.g. Engine Oil" required class="text-sm border dark:border-zinc-700 rounded-lg p-2 w-full bg-white dark:bg-zinc-900 dark:text-white focus-ring-accent">
+                        </div>
+                        <div class="flex-1">
+                            <label class="block text-[10px] font-bold text-gray-500 dark:text-zinc-400 uppercase tracking-wide mb-1">Spec / Value</label>
+                            <input type="text" name="value" placeholder="e.g. 5W-30 Full Synthetic" required class="text-sm border dark:border-zinc-700 rounded-lg p-2 w-full bg-white dark:bg-zinc-900 dark:text-white focus-ring-accent">
+                        </div>
+                        <button type="submit" class="bg-gray-800 dark:bg-zinc-600 text-white text-sm px-4 py-2 rounded-lg font-bold transition hover:bg-gray-900 dark:hover:bg-zinc-500 whitespace-nowrap">Save</button>
+                    </div>
                 </form>
 
-                <div id="sd-parts-list" class="mb-3 border border-gray-100 dark:border-zinc-800 rounded p-2 bg-white dark:bg-zinc-900/50">
-                    </div>
+                <div id="sd-parts-list" class="space-y-2"></div>
             </div>
 
+            <!-- Torque Specs -->
             <div>
-                <div class="flex justify-between items-center mb-2">
-                    <p class="text-[10px] uppercase font-bold text-gray-400 dark:text-zinc-500">Torque Specs</p>
-                    <button id="btn-toggle-torque" class="admin-only text-[10px] font-bold text-accent hover:underline hidden" onclick="document.getElementById('sd-add-torque-form').classList.toggle('hidden')">+ Add</button>
+                <div class="flex justify-between items-center mb-3">
+                    <div class="flex items-center gap-2">
+                        <span class="text-base">🔧</span>
+                        <p class="text-xs uppercase font-bold text-gray-500 dark:text-zinc-400 tracking-wider">Torque Specs</p>
+                    </div>
+                    <button id="btn-toggle-torque" class="admin-only hidden bg-accent/10 hover:bg-accent/20 border border-accent/30 text-accent text-xs font-bold py-1.5 px-3 rounded-lg transition flex items-center gap-1" onclick="document.getElementById('sd-add-torque-form').classList.toggle('hidden')">
+                        <span>＋</span> Add Spec
+                    </button>
                 </div>
 
-                <form id="sd-add-torque-form" onsubmit="submitGarageTorque(event)" class="hidden mb-3 flex gap-1 items-center bg-gray-50 dark:bg-zinc-800 p-2 rounded">
+                <form id="sd-add-torque-form" onsubmit="submitGarageTorque(event)" class="hidden mb-3 bg-accent/5 dark:bg-accent/10 border border-accent/20 rounded-xl p-4">
                     <input type="hidden" id="sd-torque-labels" name="labels" value="">
-                    <input type="text" name="component" placeholder="Bolt" required class="text-[10px] border dark:border-zinc-700 rounded p-1 w-1/2 bg-white dark:bg-zinc-900 dark:text-white">
-                    <input type="text" name="torque" placeholder="Torque" required class="text-[10px] border dark:border-zinc-700 rounded p-1 w-1/2 bg-white dark:bg-zinc-900 dark:text-white">
-                    <button type="submit" class="bg-accent text-white text-[10px] px-2 py-1 rounded font-bold transition hover:brightness-90">✓</button>
+                    <p class="text-[10px] font-bold uppercase tracking-wide text-accent/70 mb-3">New Torque Spec</p>
+                    <div class="flex gap-3 items-end">
+                        <div class="flex-1">
+                            <label class="block text-[10px] font-bold text-gray-500 dark:text-zinc-400 uppercase tracking-wide mb-1">Component / Bolt</label>
+                            <input type="text" name="component" placeholder="e.g. Lug Nuts" required class="text-sm border dark:border-zinc-700 rounded-lg p-2 w-full bg-white dark:bg-zinc-900 dark:text-white focus-ring-accent">
+                        </div>
+                        <div class="flex-1">
+                            <label class="block text-[10px] font-bold text-gray-500 dark:text-zinc-400 uppercase tracking-wide mb-1">Torque Value</label>
+                            <input type="text" name="torque" placeholder="e.g. 100 ft-lb" required class="text-sm border dark:border-zinc-700 rounded-lg p-2 w-full bg-white dark:bg-zinc-900 dark:text-white focus-ring-accent">
+                        </div>
+                        <button type="submit" class="bg-accent text-white text-sm px-4 py-2 rounded-lg font-bold transition hover:brightness-90 whitespace-nowrap">Save</button>
+                    </div>
                 </form>
 
-                <div id="sd-torque-list" class="mb-3 border border-gray-100 dark:border-zinc-800 rounded p-2 bg-white dark:bg-zinc-900/50">
-                    </div>
+                <div id="sd-torque-list" class="space-y-2"></div>
             </div>
+
         </div>
 
     </div>

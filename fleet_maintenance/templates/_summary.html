@@ -61,9 +61,7 @@
                 
                 <div class="flex justify-between items-center mb-3 border-b dark:border-zinc-700 pb-2">
                     <p class="text-xs text-gray-500 dark:text-zinc-400 uppercase">{{ s.category }}</p>
-                    <button data-service="{{ s | tojson | forceescape }}" onclick="openServiceDetails(JSON.parse(this.dataset.service))" class="text-[10px] font-bold text-accent bg-accent/10 hover:bg-accent/20 px-2 py-1 rounded transition flex items-center gap-1">
-                        <span>ℹ️</span> Garage Mode
-                    </button>
+                    <button data-service="{{ s | tojson | forceescape }}" onclick="openServiceDetails(JSON.parse(this.dataset.service), '{{ current_vin }}', {{ 'false' if shared_mode else 'true' }})" class="bg-accent/10 hover:bg-accent/20 border border-accent/30 text-accent text-[10px] font-bold py-1.5 px-3 rounded-md shadow-sm transition flex items-center gap-1.5 whitespace-nowrap">🛠️ Garage Mode</button>
                 </div>
 
                 <div class="text-xs space-y-2 mb-4 text-gray-600 dark:text-zinc-300">
