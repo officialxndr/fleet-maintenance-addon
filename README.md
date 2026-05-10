@@ -36,9 +36,20 @@ If you run Home Assistant OS or Supervised, you can install this app directly fr
 
 ## 🐳 Installation Option B: Standalone Docker
 
-If you prefer to run this via Unraid, a Raspberry Pi, or a standard Linux server, you can deploy it instantly using Docker Compose.
+If you prefer to run this via Unraid, a Raspberry Pi, or a standard Linux server, you can deploy it instantly using Docker.
 
-Create a `docker-compose.yml` file:
+1. Pull the Image and Prepare Directory
+First, pull the latest image from the repository and navigate to your project folder:
+
+```
+# Pull the latest image
+docker pull ghcr.io/officialxndr/fleet-maintenance-addon:latest
+
+# Navigate to your maintenance folder
+cd fleet_maintenance
+```
+
+2. Create and or edit the `docker-compose.yml` file:
 
 ```yaml
 version: '3.8'
@@ -64,7 +75,7 @@ services:
       - MQTT_PASS=your_mqtt_password
 ```
 
-Run the container:
+3. Run the container:
 
 ```
 Bash
