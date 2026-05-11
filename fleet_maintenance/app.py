@@ -436,6 +436,25 @@ def delete_log(vin, log_id):
     save_db(db, sync_mqtt=False)
     return redirect(f"{get_base_path()}/vehicle/{vin}")
 
+@app.route('/api/<vin>/batch_delete_services', methods=['POST'])
+def batch_delete_services(vin):
+    ids = request.json.get('ids', [])
+    db = load_db()
+    db["vehicles"][vin]["services"] = [s for s in db["vehicles"][vin]["services"] if s["id"] not in ids]
+    save_db(db)
+    if mqtt_client and mqtt_client.is_connected():
+        for sid in ids:
+            mqtt_client.publish(f"homeassistant/sensor/fleet_{vin}/{sid}/config", "", retain=True)
+    return jsonify({"status": "success", "deleted": len(ids)})
+
+@app.route('/api/<vin>/batch_delete_logs', methods=['POST'])
+def batch_delete_logs(vin):
+    ids = request.json.get('ids', [])
+    db = load_db()
+    db["vehicles"][vin]["logbook"] = [l for l in db["vehicles"][vin]["logbook"] if l.get("id") not in ids]
+    save_db(db, sync_mqtt=False)
+    return jsonify({"status": "success", "deleted": len(ids)})
+
 @app.route('/api/<vin>/clear_logbook', methods=['POST'])
 def clear_logbook(vin):
     db = load_db()
@@ -616,6 +635,63 @@ def export_blueprint(vin):
         mimetype="application/json",
         headers={"Content-Disposition": f"attachment;filename={filename}"},
     )
+
+
+@app.route('/api/<vin>/import_blueprint', methods=['POST'])
+def import_blueprint(vin):
+    if 'blueprint_file' not in request.files or request.files['blueprint_file'].filename == '':
+        return redirect(f"{get_base_path()}/vehicle/{vin}")
+    db = load_db()
+    if vin not in db.get("vehicles", {}):
+        return redirect(f"{get_base_path()}/")
+    try:
+        bp = json.loads(request.files['blueprint_file'].stream.read().decode("utf-8"))
+    except (ValueError, UnicodeDecodeError):
+        return redirect(f"{get_base_path()}/vehicle/{vin}")
+    if not isinstance(bp, dict) or bp.get("blueprint_version") != 1:
+        return redirect(f"{get_base_path()}/vehicle/{vin}")
+
+    v = db["vehicles"][vin]
+    clear_services = request.form.get('clear_services') == 'yes'
+    clear_torque = request.form.get('clear_torque') == 'yes'
+
+    if "services" in bp:
+        if clear_services:
+            v["services"] = []
+        for s in bp.get("services", []):
+            v["services"].append({
+                "id": str(uuid.uuid4())[:8],
+                "category": str(s.get("category", "Other")).strip() or "Other",
+                "name": str(s.get("name", "")).strip(),
+                "interval_months": int(s.get("interval_months", 0)),
+                "interval_miles": int(s.get("interval_miles", 0)),
+                "parts_info": str(s.get("parts_info", "")).strip(),
+                "last_service_miles": None,
+                "last_service_date": None,
+                "garage_parts": [{"id": str(uuid.uuid4())[:8], "name": str(p.get("name", "")), "value": str(p.get("value", ""))} for p in (s.get("garage_parts") or [])],
+                "garage_torque": [{"id": str(uuid.uuid4())[:8], "name": str(t.get("name", "")), "value": str(t.get("value", ""))} for t in (s.get("garage_torque") or [])],
+            })
+
+    if "torque_specs" in bp:
+        if clear_torque:
+            v["torque_specs"] = []
+        for t in bp.get("torque_specs", []):
+            v.setdefault("torque_specs", []).append({
+                "id": str(uuid.uuid4())[:8],
+                "component": str(t.get("component", "")).strip(),
+                "torque": str(t.get("torque", "")).strip(),
+                "labels": str(t.get("labels", "")).strip(),
+            })
+
+    if "specs" in bp and isinstance(bp["specs"], dict):
+        existing_specs = v.get("specs") or {}
+        for key in ("engine_oil", "oil_filter", "tire_size", "tire_pressure", "wiper_blades", "manual_url"):
+            if bp["specs"].get(key):
+                existing_specs[key] = str(bp["specs"][key]).strip()
+        v["specs"] = existing_specs
+
+    save_db(db)
+    return redirect(f"{get_base_path()}/vehicle/{vin}")
 
 
 @app.route('/api/<vin>/export_logbook')
