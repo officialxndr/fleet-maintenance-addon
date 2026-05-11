@@ -3,8 +3,8 @@
 {% block content %}
     {% include "_modals.html" %}
 
-    <div class="w-[96%] max-w-[2400px] mx-auto mb-2 flex justify-end gap-2 admin-only">
-        <button onclick="toggleSettingsModal()" class="text-xs font-bold text-gray-500 dark:text-zinc-400 bg-white dark:bg-zinc-900 px-3 py-1.5 rounded shadow-sm border border-gray-200 dark:border-zinc-800 hover:text-accent transition">⚙️ App Settings</button>
+    <div class="w-[96%] max-w-[2400px] mx-auto mb-2 flex justify-end gap-2">
+        <button onclick="toggleSettingsModal()" class="admin-only text-xs font-bold text-gray-500 dark:text-zinc-400 bg-white dark:bg-zinc-900 px-3 py-1.5 rounded shadow-sm border border-gray-200 dark:border-zinc-800 hover:text-accent transition">⚙️ App Settings</button>
         <button onclick="toggleReadOnly()" id="lock-icon" class="text-xs font-bold text-gray-500 dark:text-zinc-400 bg-white dark:bg-zinc-900 px-3 py-1.5 rounded shadow-sm border border-gray-200 dark:border-zinc-800 hover:text-accent transition">🔓 Dashboard Unlocked</button>
     </div>
 
