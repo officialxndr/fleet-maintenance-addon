@@ -436,6 +436,14 @@ def delete_log(vin, log_id):
     save_db(db, sync_mqtt=False)
     return redirect(f"{get_base_path()}/vehicle/{vin}")
 
+@app.route('/api/<vin>/clear_logbook', methods=['POST'])
+def clear_logbook(vin):
+    db = load_db()
+    if vin in db.get("vehicles", {}):
+        db["vehicles"][vin]["logbook"] = []
+        save_db(db, sync_mqtt=False)
+    return redirect(f"{get_base_path()}/vehicle/{vin}?tab=logbook")
+
 @app.route('/api/import_baseline_csv', methods=['POST'])
 @app.route('/api/<vin>/import_baseline_csv', methods=['POST'])
 def import_baseline_csv(vin=None):
@@ -474,8 +482,9 @@ def export_intervals(vin):
 def import_csv(vin):
     if 'csv_file' in request.files:
         db = load_db()
-        # Clear existing services to prevent duplicates on re-import
-        db["vehicles"][vin]["services"] = []
+        # Clear existing services only if checkbox is checked
+        if request.form.get('clear_existing') == 'yes':
+            db["vehicles"][vin]["services"] = []
         for row in csv.DictReader(StringIO(request.files['csv_file'].stream.read().decode("UTF8"), newline=None)): 
             db["vehicles"][vin]["services"].append({"id": str(uuid.uuid4())[:8], "category": row.get('Category', 'Other').strip(), "name": row.get('Service', 'Unknown').strip(), "interval_months": int(row.get('Interval_Months', 0)), "interval_miles": int(row.get('Interval_Miles', 0)), "parts_info": row.get('Parts_Info', '').strip(), "last_service_miles": None, "last_service_date": None, "garage_parts": [], "garage_torque": []})
         save_db(db)
@@ -487,6 +496,10 @@ def import_logbook(vin):
         db = load_db()
         if vin not in db.get("vehicles", {}):
             return redirect(f"{get_base_path()}/")
+        
+        # Clear existing logbook entries only if checkbox is checked
+        if request.form.get('clear_existing') == 'yes':
+            db["vehicles"][vin]["logbook"] = []
         
         success_count = 0
         error_messages = []
