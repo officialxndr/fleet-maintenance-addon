@@ -54,11 +54,24 @@
             </div>
         </div>
 
+        <!-- Torque multi-select toolbar -->
+        <div id="torque-selection-toolbar" data-vin="{{ current_vin }}" data-ingress="{{ ingress_path }}" class="hidden sticky top-2 z-10 flex items-center gap-3 bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 rounded-lg px-4 py-2.5 shadow-md mb-3 admin-only">
+            <span id="torque-selected-count" class="text-sm font-bold text-gray-700 dark:text-gray-300">0 selected</span>
+            <div class="flex gap-2 ml-auto">
+                <button type="button" onclick="editSelectedTorque()" class="text-xs bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-800 py-1.5 px-3 rounded-md font-bold hover:bg-blue-100 dark:hover:bg-blue-900/40 transition">Edit Selected</button>
+                <button type="button" onclick="deleteSelectedTorque()" class="text-xs bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-800 py-1.5 px-3 rounded-md font-bold hover:bg-red-100 dark:hover:bg-red-900/40 transition">Delete Selected</button>
+                <button type="button" onclick="clearSelection('torque')" class="text-xs bg-gray-100 dark:bg-zinc-800 text-gray-600 dark:text-gray-400 py-1.5 px-3 rounded-md font-bold hover:bg-gray-200 dark:hover:bg-zinc-700 transition">Clear</button>
+            </div>
+        </div>
+
         <!-- Torque Specs Table -->
         <div class="bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-lg shadow-sm overflow-hidden">
             <table class="w-full text-sm text-left">
                 <thead class="bg-gray-100 dark:bg-zinc-800 text-gray-600 dark:text-gray-300 uppercase text-[10px] font-bold tracking-wide">
                     <tr>
+                        <th class="p-3 border-b dark:border-zinc-700 w-8 admin-only">
+                            <input type="checkbox" id="torque-select-all" onchange="selectAll('torque', this.checked)" class="rounded border-gray-300 dark:border-zinc-600 text-accent focus:ring-accent">
+                        </th>
                         <th class="p-3 border-b dark:border-zinc-700">Component</th>
                         <th class="p-3 border-b dark:border-zinc-700">Torque Spec</th>
                         <th class="p-3 border-b dark:border-zinc-700">Auto-Link Labels</th>
@@ -70,6 +83,9 @@
                         {% for t in vehicle_data.torque_specs %}
                         <!-- View row -->
                         <tr id="torque-row-{{ t.id }}" data-component="{{ t.component | e }}" data-torque="{{ t.torque | e }}" data-labels="{{ t.labels | e }}" class="border-b border-gray-100 dark:border-zinc-800 last:border-0 hover:bg-gray-50 dark:hover:bg-zinc-800/30 transition">
+                            <td class="p-3 admin-only">
+                                <input type="checkbox" class="torque-checkbox rounded border-gray-300 dark:border-zinc-600 text-accent focus:ring-accent" data-id="{{ t.id }}" onchange="updateSelectionToolbar('torque')">
+                            </td>
                             <td class="p-3 text-gray-800 dark:text-gray-200" id="torque-row-{{ t.id }}-component">{{ t.component }}</td>
                             <td class="p-3 font-bold text-accent" id="torque-row-{{ t.id }}-torque">{{ t.torque }}</td>
                             <td class="p-3" id="torque-row-{{ t.id }}-labels">
@@ -91,6 +107,7 @@
                         </tr>
                         <!-- Inline edit row (hidden until Edit is clicked) -->
                         <tr id="torque-edit-row-{{ t.id }}" class="hidden border-b border-blue-100 dark:border-blue-900/40 bg-blue-50/60 dark:bg-blue-900/10">
+                            <td class="p-2 admin-only"></td>
                             <td class="p-2">
                                 <input type="text" id="torque-edit-component-{{ t.id }}" class="w-full text-sm border border-gray-300 dark:border-zinc-600 rounded-lg px-2 py-1.5 bg-white dark:bg-zinc-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-accent/50" placeholder="Component / Bolt">
                             </td>
@@ -109,7 +126,7 @@
                         </tr>
                         {% endfor %}
                     {% else %}
-                        <tr id="torque-empty-row"><td colspan="4" class="p-6 text-center text-gray-400 italic">No torque specifications added yet.</td></tr>
+                        <tr id="torque-empty-row"><td colspan="5" class="p-6 text-center text-gray-400 italic">No torque specifications added yet.</td></tr>
                     {% endif %}
                 </tbody>
             </table>
@@ -391,6 +408,9 @@ function torqueLabelChipsHtml(labels) {
 }
 
 function buildTorqueRow(t, isAdmin) {
+    const adminCheckboxCell = isAdmin
+        ? `<td class="p-3 admin-only"><input type="checkbox" class="torque-checkbox rounded border-gray-300 dark:border-zinc-600 text-accent focus:ring-accent" data-id="${t.id}" onchange="updateSelectionToolbar('torque')"></td>`
+        : '<td class="p-3 admin-only"></td>';
     const adminViewCell = isAdmin
         ? `<td class="p-3 text-center admin-only"><div class="flex items-center justify-center gap-2">
               <button type="button" onclick="openEditTorque('${t.id}')" class="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-800/50 border border-blue-200 dark:border-blue-700 px-2.5 py-1 rounded transition">Edit</button>
@@ -404,12 +424,14 @@ function buildTorqueRow(t, isAdmin) {
            </div></td>`
         : '<td class="p-2 text-center admin-only"></td>';
     return `<tr id="torque-row-${t.id}" data-component="${(t.component||'').replace(/"/g,'&quot;')}" data-torque="${(t.torque||'').replace(/"/g,'&quot;')}" data-labels="${(t.labels||'').replace(/"/g,'&quot;')}" class="border-b border-gray-100 dark:border-zinc-800 last:border-0 hover:bg-gray-50 dark:hover:bg-zinc-800/30 transition">
+        ${adminCheckboxCell}
         <td class="p-3 text-gray-800 dark:text-gray-200" id="torque-row-${t.id}-component">${t.component}</td>
         <td class="p-3 font-bold text-accent" id="torque-row-${t.id}-torque">${t.torque}</td>
         <td class="p-3" id="torque-row-${t.id}-labels">${torqueLabelChipsHtml(t.labels)}</td>
         ${adminViewCell}
     </tr>
     <tr id="torque-edit-row-${t.id}" class="hidden border-b border-blue-100 dark:border-blue-900/40 bg-blue-50/60 dark:bg-blue-900/10">
+        <td class="p-2 admin-only"></td>
         <td class="p-2"><input type="text" id="torque-edit-component-${t.id}" class="w-full text-sm border border-gray-300 dark:border-zinc-600 rounded-lg px-2 py-1.5 bg-white dark:bg-zinc-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-accent/50" placeholder="Component / Bolt"></td>
         <td class="p-2"><input type="text" id="torque-edit-torque-${t.id}" class="w-full text-sm border border-gray-300 dark:border-zinc-600 rounded-lg px-2 py-1.5 bg-white dark:bg-zinc-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-accent/50" placeholder="e.g. 100 ft-lbs"></td>
         <td class="p-2"><div id="torque-edit-chip-${t.id}" class="label-chip-widget"></div></td>
@@ -461,18 +483,54 @@ async function deleteSpecsTorque(id) {
     const data = await res.json();
     if (data.status === 'success') {
         const row = document.getElementById('torque-row-' + id);
+        const editRow = document.getElementById('torque-edit-row-' + id);
         if (row) row.remove();
-        // Show empty state if no rows left
+        if (editRow) editRow.remove();
         const tbody = document.getElementById('torque-specs-tbody');
         if (!tbody.querySelector('tr:not(#torque-empty-row)')) {
-            tbody.innerHTML = '<tr id="torque-empty-row"><td colspan="4" class="p-6 text-center text-gray-400 italic">No torque specifications added yet.</td></tr>';
+            tbody.innerHTML = '<tr id="torque-empty-row"><td colspan="5" class="p-6 text-center text-gray-400 italic">No torque specifications added yet.</td></tr>';
         }
-        // Sync global-torque-data
         try {
             const gt = JSON.parse(document.getElementById('global-torque-data').textContent);
             document.getElementById('global-torque-data').textContent = JSON.stringify(gt.filter(t => t.id !== id));
         } catch(e) {}
     }
+}
+
+function editSelectedTorque() {
+    const selected = Array.from(document.querySelectorAll('.torque-checkbox:checked'));
+    selected.forEach(cb => {
+        const id = cb.dataset.id;
+        const viewRow = document.getElementById('torque-row-' + id);
+        if (viewRow && !viewRow.classList.contains('hidden')) openEditTorque(id);
+    });
+    clearSelection('torque');
+}
+
+async function deleteSelectedTorque() {
+    const selected = Array.from(document.querySelectorAll('.torque-checkbox:checked'));
+    const ids = selected.map(cb => cb.dataset.id);
+    if (!ids.length) return;
+    if (!confirm('Delete ' + ids.length + ' torque spec' + (ids.length > 1 ? 's' : '') + '?')) return;
+    for (const id of ids) {
+        const res = await fetch('{{ ingress_path }}/api/{{ current_vin }}/delete_torque/' + id, { method: 'POST', headers: { 'Accept': 'application/json' } });
+        const data = await res.json();
+        if (data.status === 'success') {
+            const row = document.getElementById('torque-row-' + id);
+            const editRow = document.getElementById('torque-edit-row-' + id);
+            if (row) row.remove();
+            if (editRow) editRow.remove();
+            try {
+                const gt = JSON.parse(document.getElementById('global-torque-data').textContent);
+                document.getElementById('global-torque-data').textContent = JSON.stringify(gt.filter(t => t.id !== id));
+            } catch(e) {}
+        }
+    }
+    const tbody = document.getElementById('torque-specs-tbody');
+    if (!tbody.querySelector('tr:not(#torque-empty-row)')) {
+        tbody.innerHTML = '<tr id="torque-empty-row"><td colspan="5" class="p-6 text-center text-gray-400 italic">No torque specifications added yet.</td></tr>';
+    }
+    clearSelection('torque');
 }
 
 function openEditTorque(id) {

@@ -450,6 +450,69 @@
             editEl.classList.toggle('flex');
         }
 
+        function updateSelectionToolbar(section) {
+            const checked = document.querySelectorAll('.' + section + '-checkbox:checked');
+            const all = document.querySelectorAll('.' + section + '-checkbox');
+            const toolbar = document.getElementById(section + '-selection-toolbar');
+            const countEl = document.getElementById(section + '-selected-count');
+            const selectAllCb = document.getElementById(section + '-select-all');
+            if (toolbar) toolbar.classList.toggle('hidden', checked.length === 0);
+            if (countEl) countEl.textContent = checked.length + ' selected';
+            if (selectAllCb) {
+                selectAllCb.checked = all.length > 0 && checked.length === all.length;
+                selectAllCb.indeterminate = checked.length > 0 && checked.length < all.length;
+            }
+        }
+
+        function selectAll(section, checked) {
+            document.querySelectorAll('.' + section + '-checkbox').forEach(cb => cb.checked = checked);
+            updateSelectionToolbar(section);
+        }
+
+        function clearSelection(section) {
+            document.querySelectorAll('.' + section + '-checkbox').forEach(cb => cb.checked = false);
+            updateSelectionToolbar(section);
+        }
+
+        function editSelected(section) {
+            const selected = Array.from(document.querySelectorAll('.' + section + '-checkbox:checked'));
+            selected.forEach(cb => {
+                const id = cb.dataset.id;
+                const viewEl = document.getElementById('view-' + section + '-' + id);
+                if (viewEl && !viewEl.classList.contains('hidden')) toggleEdit(section, id);
+            });
+            clearSelection(section);
+        }
+
+        async function deleteSelected(section) {
+            const selected = Array.from(document.querySelectorAll('.' + section + '-checkbox:checked'));
+            const ids = selected.map(cb => cb.dataset.id);
+            if (!ids.length) return;
+            if (!confirm('Delete ' + ids.length + ' selected item' + (ids.length > 1 ? 's' : '') + '?')) return;
+            const toolbar = document.getElementById(section + '-selection-toolbar');
+            const vin = toolbar ? toolbar.dataset.vin : '';
+            const ingress = toolbar ? toolbar.dataset.ingress : '';
+            const endpointMap = { interval: 'batch_delete_services', log: 'batch_delete_logs' };
+            const endpoint = endpointMap[section];
+            if (!endpoint || !vin) return;
+            const res = await fetch(ingress + '/api/' + vin + '/' + endpoint, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                body: JSON.stringify({ ids })
+            });
+            const data = await res.json();
+            if (data.status === 'success') {
+                ids.forEach(id => {
+                    const viewEl = document.getElementById('view-' + section + '-' + id);
+                    if (viewEl) viewEl.parentElement.remove();
+                });
+                clearSelection(section);
+            } else {
+                alert('Could not delete selected items.');
+                window.location.reload();
+            }
+        }
+
         function toggleDropdown(event) {
             if (event) event.stopPropagation();
             document.getElementById('vehicleDropdown').classList.toggle('hidden');
