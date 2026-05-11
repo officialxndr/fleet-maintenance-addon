@@ -100,50 +100,6 @@
             </div>
         </div>
 
-        {# -- Expanded edit panel -------------------------------------------- #}
-        <div id="settings-edit" class="hidden text-left bg-gray-50 dark:bg-zinc-800 px-5 py-4 rounded-lg border border-gray-300 dark:border-zinc-700 shadow-xl min-w-[320px] w-full absolute top-0 right-0 z-50">
-            <div class="flex justify-between items-center mb-3 border-b border-gray-200 dark:border-zinc-700 pb-2">
-                <p class="text-xs font-bold text-gray-700 dark:text-gray-200 uppercase tracking-wide">Vehicle Settings</p>
-                <button type="button" onclick="toggleVehicleSettings()" class="text-gray-400 hover:text-gray-700 dark:hover:text-white text-lg leading-none" title="Close">✕</button>
-            </div>
-
-            <form action="{{ ingress_path }}/api/{{ current_vin }}/update_vehicle_settings" method="POST" class="flex flex-col gap-3">
-                <div><label class="block text-[10px] text-gray-500 dark:text-zinc-400 uppercase font-bold mb-1">Nickname</label><input type="text" name="nickname" value="{{ vehicle_data.nickname }}" class="w-full text-sm border dark:border-zinc-600 rounded p-1.5 bg-white dark:bg-zinc-900 dark:text-white focus-ring-accent"></div>
-                <div><label class="block text-[10px] text-gray-500 dark:text-zinc-400 uppercase font-bold mb-1">Manual Mileage</label><input type="number" name="mileage" value="{{ vehicle_data.current_mileage }}" min="0" class="w-full text-sm border dark:border-zinc-600 rounded p-1.5 bg-white dark:bg-zinc-900 dark:text-white focus-ring-accent"></div>
-                <div><label class="block text-[10px] text-gray-500 dark:text-zinc-400 uppercase font-bold mb-1">HA Entity ID</label><input list="ha-sensors-list" name="ha_entity_id" value="{{ vehicle_data.ha_entity_id }}" class="w-full text-sm border dark:border-zinc-600 rounded p-1.5 bg-white dark:bg-zinc-900 dark:text-white focus-ring-accent"><datalist id="ha-sensors-list">{% for sensor in ha_sensors %}<option value="{{ sensor.id }}">{{ sensor.name }}</option>{% endfor %}</datalist></div>
-                <div><label class="block text-[10px] text-gray-500 dark:text-zinc-400 uppercase font-bold mb-1">Image URL</label><input type="text" name="image_url" value="{{ vehicle_data.image_url }}" class="w-full text-sm border dark:border-zinc-600 rounded p-1.5 bg-white dark:bg-zinc-900 dark:text-white focus-ring-accent"></div>
-                <div class="flex gap-2 mt-1"><button type="submit" class="bg-accent text-white text-xs py-2 px-3 rounded shadow font-bold flex-1">Save Changes</button><button type="button" onclick="toggleVehicleSettings()" class="bg-gray-200 dark:bg-zinc-700 text-gray-800 dark:text-gray-200 text-xs py-2 px-3 rounded shadow font-bold">Cancel</button></div>
-            </form>
-
-            {# -- Danger / share zone --------------------------------------- #}
-            <div class="mt-4 pt-3 border-t border-gray-200 dark:border-zinc-700 space-y-2">
-                <p class="text-[10px] text-gray-500 dark:text-zinc-400 uppercase font-bold tracking-wide">Sharing & Removal</p>
-                <a href="{{ ingress_path }}/api/{{ current_vin }}/export_blueprint" class="block w-full text-center bg-indigo-50 dark:bg-indigo-900/20 hover:bg-indigo-100 dark:hover:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-900/40 text-xs font-bold py-2 px-3 rounded transition" title="Download a JSON blueprint of this vehicle's intervals, parts, torque specs, and reference info — no personal data included.">
-                    📦 Export Blueprint (JSON)
-                </a>
-                <form action="{{ ingress_path }}/api/{{ current_vin }}/import_blueprint" method="POST" enctype="multipart/form-data" onsubmit="return confirm('Apply this blueprint to the current vehicle? Depending on your selections, existing data may be replaced.');" class="border border-indigo-200 dark:border-indigo-900/40 bg-indigo-50 dark:bg-indigo-900/10 rounded p-2.5">
-                    <p class="text-[10px] text-indigo-700 dark:text-indigo-400 font-bold uppercase tracking-wide mb-1.5">📂 Import Blueprint</p>
-                    <input type="file" name="blueprint_file" accept=".json" required class="text-xs w-full mb-2 dark:text-gray-300">
-                    <div class="flex flex-col gap-1 mb-2">
-                        <label class="flex items-center gap-1.5 text-xs text-gray-500 dark:text-zinc-400 cursor-pointer">
-                            <input type="checkbox" name="clear_services" value="yes" class="rounded border-gray-300 dark:border-zinc-600 text-accent">
-                            Replace existing services
-                        </label>
-                        <label class="flex items-center gap-1.5 text-xs text-gray-500 dark:text-zinc-400 cursor-pointer">
-                            <input type="checkbox" name="clear_torque" value="yes" class="rounded border-gray-300 dark:border-zinc-600 text-accent">
-                            Replace existing torque specs
-                        </label>
-                    </div>
-                    <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold py-2 px-3 rounded transition">Apply Blueprint</button>
-                </form>
-                <form action="{{ ingress_path }}/api/{{ current_vin }}/delete_vehicle" method="POST"
-                      onsubmit="return confirm('Delete this vehicle and all its logs, fuel entries, intervals and garage data? This cannot be undone.');">
-                    <button type="submit" class="w-full bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/40 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-900/40 text-xs font-bold py-2 px-3 rounded transition">
-                        🗑️ Delete Vehicle
-                    </button>
-                </form>
-            </div>
-        </div>
     </div>
     {% endif %}
 </div>
