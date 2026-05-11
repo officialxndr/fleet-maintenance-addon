@@ -474,6 +474,8 @@ def export_intervals(vin):
 def import_csv(vin):
     if 'csv_file' in request.files:
         db = load_db()
+        # Clear existing services to prevent duplicates on re-import
+        db["vehicles"][vin]["services"] = []
         for row in csv.DictReader(StringIO(request.files['csv_file'].stream.read().decode("UTF8"), newline=None)): 
             db["vehicles"][vin]["services"].append({"id": str(uuid.uuid4())[:8], "category": row.get('Category', 'Other').strip(), "name": row.get('Service', 'Unknown').strip(), "interval_months": int(row.get('Interval_Months', 0)), "interval_miles": int(row.get('Interval_Miles', 0)), "parts_info": row.get('Parts_Info', '').strip(), "last_service_miles": None, "last_service_date": None, "garage_parts": [], "garage_torque": []})
         save_db(db)
