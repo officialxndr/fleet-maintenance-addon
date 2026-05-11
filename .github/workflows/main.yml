@@ -1,0 +1,38 @@
+name: Sync Version on Release
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  update-metadata:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Get tag version
+        id: tag
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/}
+          VERSION=${VERSION#v}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Update config.json
+        run: |
+          # Updated path to include the subfolder
+          jq '.version = "${{ steps.tag.outputs.version }}"' fleet_maintenance/config.json > temp.json && mv temp.json fleet_maintenance/config.json
+
+      - name: Update config.yaml
+        run: |
+          # Updated path to include the subfolder
+          yq -i '.version = "${{ steps.tag.outputs.version }}"' fleet_maintenance/config.yaml
+
+      - name: Commit and push changes
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "chore: bump version to ${{ steps.tag.outputs.version }}"
+          # Ensure the file pattern looks in the subfolder
+          file_pattern: 'fleet_maintenance/config.json fleet_maintenance/config.yaml'
