@@ -392,7 +392,9 @@ def delete_service(vin, service_id):
 
 def log_entry_and_sync(vin, service_name, date_str, mileage, notes, cost_parts, cost_labor, db, track_interval=True):
     v_data = db["vehicles"][vin]
-    v_data["current_mileage"] = mileage
+    # Only update current_mileage if the new mileage is higher
+    if mileage > v_data.get("current_mileage", 0):
+        v_data["current_mileage"] = mileage
     resolved_name = service_name
     for s in v_data["services"]:
         if s["name"].lower() == service_name.lower() or s.get("id") == service_name:
@@ -481,9 +483,55 @@ def import_csv(vin):
 def import_logbook(vin):
     if 'csv_file' in request.files:
         db = load_db()
-        for row in csv.DictReader(StringIO(request.files['csv_file'].stream.read().decode("UTF8"), newline=None)): 
-            log_entry_and_sync(vin, row.get('Service', 'Unknown').strip(), parse_date(row.get('Date', '')).strftime("%Y-%m-%d"), int(row.get('Mileage', 0) or 0), row.get('Notes', '').strip(), float(row.get('Parts', 0) or 0), float(row.get('Labor', 0) or 0), db, track_interval=True)
-        save_db(db)
+        if vin not in db.get("vehicles", {}):
+            return redirect(f"{get_base_path()}/")
+        
+        success_count = 0
+        error_messages = []
+        
+        try:
+            csv_content = request.files['csv_file'].stream.read().decode("UTF-8-sig")  # Handle BOM
+            reader = csv.DictReader(StringIO(csv_content, newline=None))
+            
+            for line_num, row in enumerate(reader, start=2):  # Start at 2 (header is line 1)
+                try:
+                    # Normalize column names (strip whitespace, handle case variations)
+                    normalized_row = {k.strip(): v for k, v in row.items() if k}
+                    
+                    service_name = (normalized_row.get('Service') or normalized_row.get('service') or 'Unknown').strip()
+                    date_str = (normalized_row.get('Date') or normalized_row.get('date') or '').strip()
+                    notes = (normalized_row.get('Notes') or normalized_row.get('notes') or '').strip()
+                    
+                    # Parse mileage - handle commas and various formats
+                    mileage_raw = normalized_row.get('Mileage') or normalized_row.get('mileage') or '0'
+                    mileage_str = str(mileage_raw).replace(',', '').strip()
+                    mileage = int(float(mileage_str)) if mileage_str else 0
+                    
+                    # Parse costs - handle currency symbols and commas
+                    parts_raw = normalized_row.get('Parts') or normalized_row.get('parts') or '0'
+                    parts_str = str(parts_raw).replace('$', '').replace(',', '').strip()
+                    cost_parts = float(parts_str) if parts_str else 0.0
+                    
+                    labor_raw = normalized_row.get('Labor') or normalized_row.get('labor') or '0'
+                    labor_str = str(labor_raw).replace('$', '').replace(',', '').strip()
+                    cost_labor = float(labor_str) if labor_str else 0.0
+                    
+                    log_entry_and_sync(vin, service_name, parse_date(date_str).strftime("%Y-%m-%d"), 
+                                      mileage, notes, cost_parts, cost_labor, db, track_interval=True)
+                    success_count += 1
+                except Exception as e:
+                    error_messages.append(f"Line {line_num}: {str(e)}")
+                    continue
+            
+            save_db(db)
+            
+        except Exception as e:
+            error_messages.append(f"CSV parsing error: {str(e)}")
+        
+        if error_messages:
+            # Store errors in session or flash - for now, just print
+            print(f"Import logbook errors for {vin}: {error_messages}")
+    
     return redirect(f"{get_base_path()}/vehicle/{vin}")
 
 @app.route('/api/<vin>/export_blueprint')
@@ -563,7 +611,15 @@ def export_logbook(vin):
     writer = csv.writer(si)
     writer.writerow(['Date', 'Service', 'Mileage', 'Notes', 'Parts', 'Labor'])
     for log in sorted(db["vehicles"][vin].get("logbook", []), key=lambda x: x.get('date', ''), reverse=True):
-        writer.writerow([log.get('date', ''), log.get('service', ''), log.get('mileage', ''), log.get('notes', ''), log.get('cost_parts', 0), log.get('cost_labor', 0)])
+        # Export with consistent formatting - no currency symbols in the CSV
+        writer.writerow([
+            log.get('date', ''), 
+            log.get('service', ''), 
+            log.get('mileage', ''), 
+            log.get('notes', ''), 
+            f"{float(log.get('cost_parts', 0)):.2f}",
+            f"{float(log.get('cost_labor', 0)):.2f}"
+        ])
     return Response(si.getvalue(), mimetype="text/csv", headers={"Content-Disposition": f"attachment;filename=logbook_{vin}.csv"})
 
 if __name__ == '__main__':
