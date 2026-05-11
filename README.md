@@ -1,5 +1,7 @@
 # Fleet Maintenance
 
+![Dashboard Preview](imgs/dashboard.png)
+
 > A powerful, self-hosted vehicle management system and predictive maintenance dashboard — built for enthusiasts who want complete control over their garage data.
 
 Fleet Maintenance goes far beyond a simple logbook. It combines predictive maintenance math, job-specific "Garage Mode" toolcards, deep Home Assistant integration, and secure read-only guest sharing into one lightweight, self-hosted application. Your data never leaves your server.
