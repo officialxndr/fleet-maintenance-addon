@@ -1,6 +1,7 @@
 from flask import Flask, request, jsonify, render_template, redirect, Response, send_from_directory
 import csv
 import json  # FIX: previously missing; broke /api/export_db
+import re
 import uuid
 import requests
 from datetime import datetime
@@ -8,6 +9,21 @@ from io import StringIO
 from core import load_db, save_db, calculate_status, calculate_fuel_stats, calculate_adm, get_ha_sensors, parse_date, mqtt_client
 
 app = Flask(__name__, static_folder='static')
+
+# Canonical list of UI tabs (matches button ids in templates/index.html minus the "btn-" prefix).
+ALL_TABS = ["summary", "timeline", "intervals", "logbook", "fuel", "specs"]
+
+# Standard 17-char VIN: alphanumeric, no I/O/Q (banned to avoid confusion with 1/0).
+# Vehicles pre-1981 sometimes use shorter codes; users who have one of those can
+# simply leave the field blank and we'll generate a LOCAL-xxxxxxxx id instead.
+_VIN_RE = re.compile(r"^[A-HJ-NPR-Z0-9]{17}$")
+
+def _is_valid_vin(s):
+    return bool(_VIN_RE.match((s or "").strip().upper()))
+
+def _generate_local_id():
+    """Identifier used in place of a VIN when the user leaves it blank."""
+    return "LOCAL-" + str(uuid.uuid4())[:8].upper()
 
 @app.context_processor
 def inject_ingress_path(): return dict(ingress_path=request.headers.get("X-Ingress-Path", ""))
@@ -86,6 +102,14 @@ def update_global_settings():
     for key in ["coming_up_miles", "coming_up_months", "ha_polling"]: gs[key] = int(request.form.get(key, gs[key]))
     for key in ["unit", "currency", "date_format", "mqtt_enabled", "temp_entity_id"]: gs[key] = request.form.get(key, gs.get(key))
     if "mqtt_enabled" not in request.form: gs["mqtt_enabled"] = "off"
+
+    # Tab visibility: the form sends a `visible_tab` checkbox per tab the
+    # user wants visible. Anything in ALL_TABS that's NOT in the submitted
+    # set is hidden. Stored as a comma-separated string for simplicity.
+    if "tab_visibility_submitted" in request.form:
+        visible = set(request.form.getlist("visible_tab"))
+        gs["hidden_tabs"] = ",".join(t for t in ALL_TABS if t not in visible)
+
     save_db(db)
     return redirect(request.headers.get("Referer", f"{get_base_path()}/"))
 
@@ -116,21 +140,59 @@ def decode_vin(vin):
 @app.route('/api/add_vehicle', methods=['POST'])
 def add_vehicle():
     db = load_db()
-    vin = request.form.get('vin', '').strip().upper()
-    if vin:
-        new_services_config = []
-        if 'csv_file' in request.files and request.files['csv_file'].filename != '':
-            for row in csv.DictReader(StringIO(request.files['csv_file'].stream.read().decode("UTF8"), newline=None)):
-                new_services_config.append({"id": str(uuid.uuid4())[:8], "category": row.get('Category', 'Other').strip(), "name": row.get('Service', 'Unknown').strip(), "interval_months": int(row.get('Interval_Months', 0)), "interval_miles": int(row.get('Interval_Miles', 0)), "parts_info": row.get('Parts_Info', '').strip()})
-        else: new_services_config = [dict(s, id=str(uuid.uuid4())[:8]) for s in db.get("default_services", [])]
+    raw_vin = (request.form.get('vin', '') or '').strip().upper()
 
-        if request.form.get('update_baseline') == 'yes' and new_services_config:
-            db["default_services"] = [{"id": str(uuid.uuid4())[:8], "category": s["category"], "name": s["name"], "interval_months": s["interval_months"], "interval_miles": s["interval_miles"], "parts_info": s.get("parts_info", "")} for s in new_services_config]
+    # VIN policy:
+    #   - blank → auto-generate LOCAL-xxxxxxxx so users without a VIN can still add the car
+    #   - non-blank → must be a valid 17-char VIN; otherwise show an error and bounce back
+    if raw_vin == "":
+        vin = _generate_local_id()
+        # collision guard, just in case
+        while vin in db.get("vehicles", {}):
+            vin = _generate_local_id()
+    else:
+        if not _is_valid_vin(raw_vin):
+            # Send the user back to the add-vehicle form with a friendly error banner.
+            return redirect(f"{get_base_path()}/?tab=add&add_error=invalid_vin")
+        if raw_vin in db.get("vehicles", {}):
+            return redirect(f"{get_base_path()}/?tab=add&add_error=duplicate_vin")
+        vin = raw_vin
 
-        db.setdefault("vehicles", {})[vin] = {"nickname": request.form.get('nickname', '').strip(), "year": request.form.get('year', ''), "make": request.form.get('make', ''), "model": request.form.get('model', ''), "current_mileage": int(request.form.get('mileage', 0)), "theme_color": "#2563eb", "ha_entity_id": request.form.get('ha_entity_id', '').strip(), "image_url": request.form.get('image_url', '').strip(), "services": [dict(s, last_service_miles=None, last_service_date=None, garage_parts=[], garage_torque=[]) for s in new_services_config], "logbook": [], "specs": {"battery_date": ""}, "fuel_logs": [], "torque_specs": [], "share_token": str(uuid.uuid4())}
-        save_db(db)
-        return redirect(f"{get_base_path()}/vehicle/{vin}")
-    return redirect(f"{get_base_path()}/")
+    # Starting mileage defaults to 0 — especially useful when a Home Assistant
+    # entity is linked, since the value gets overwritten by the poller shortly.
+    try:
+        mileage = int((request.form.get('mileage') or '0').strip() or 0)
+    except ValueError:
+        mileage = 0
+
+    new_services_config = []
+    if 'csv_file' in request.files and request.files['csv_file'].filename != '':
+        for row in csv.DictReader(StringIO(request.files['csv_file'].stream.read().decode("UTF8"), newline=None)):
+            new_services_config.append({"id": str(uuid.uuid4())[:8], "category": row.get('Category', 'Other').strip(), "name": row.get('Service', 'Unknown').strip(), "interval_months": int(row.get('Interval_Months', 0)), "interval_miles": int(row.get('Interval_Miles', 0)), "parts_info": row.get('Parts_Info', '').strip()})
+    else:
+        new_services_config = [dict(s, id=str(uuid.uuid4())[:8]) for s in db.get("default_services", [])]
+
+    if request.form.get('update_baseline') == 'yes' and new_services_config:
+        db["default_services"] = [{"id": str(uuid.uuid4())[:8], "category": s["category"], "name": s["name"], "interval_months": s["interval_months"], "interval_miles": s["interval_miles"], "parts_info": s.get("parts_info", "")} for s in new_services_config]
+
+    db.setdefault("vehicles", {})[vin] = {
+        "nickname": request.form.get('nickname', '').strip(),
+        "year": request.form.get('year', ''),
+        "make": request.form.get('make', ''),
+        "model": request.form.get('model', ''),
+        "current_mileage": mileage,
+        "theme_color": "#2563eb",
+        "ha_entity_id": request.form.get('ha_entity_id', '').strip(),
+        "image_url": request.form.get('image_url', '').strip(),
+        "services": [dict(s, last_service_miles=None, last_service_date=None, garage_parts=[], garage_torque=[]) for s in new_services_config],
+        "logbook": [],
+        "specs": {"battery_date": ""},
+        "fuel_logs": [],
+        "torque_specs": [],
+        "share_token": str(uuid.uuid4()),
+    }
+    save_db(db)
+    return redirect(f"{get_base_path()}/vehicle/{vin}")
 
 @app.route('/api/<vin>/update_vehicle_settings', methods=['POST'])
 def update_vehicle_settings(vin):
@@ -372,8 +434,12 @@ def delete_log(vin, log_id):
     save_db(db, sync_mqtt=False)
     return redirect(f"{get_base_path()}/vehicle/{vin}")
 
+@app.route('/api/import_baseline_csv', methods=['POST'])
 @app.route('/api/<vin>/import_baseline_csv', methods=['POST'])
-def import_baseline_csv(vin):
+def import_baseline_csv(vin=None):
+    # The VIN-prefixed route exists only for backward compatibility — this
+    # endpoint writes to the app-wide default_services template, not to any
+    # specific vehicle, so the vin argument is intentionally ignored.
     if 'csv_file' in request.files and request.files['csv_file'].filename != '':
         db = load_db()
         new_defaults = []
@@ -419,6 +485,75 @@ def import_logbook(vin):
             log_entry_and_sync(vin, row.get('Service', 'Unknown').strip(), parse_date(row.get('Date', '')).strftime("%Y-%m-%d"), int(row.get('Mileage', 0) or 0), row.get('Notes', '').strip(), float(row.get('Parts', 0) or 0), float(row.get('Labor', 0) or 0), db, track_interval=True)
         save_db(db)
     return redirect(f"{get_base_path()}/vehicle/{vin}")
+
+@app.route('/api/<vin>/export_blueprint')
+def export_blueprint(vin):
+    """
+    Export a vehicle's non-personal configuration as a shareable JSON
+    blueprint. Includes interval definitions, garage items (parts + torque
+    lists per service), the global torque-spec table, and the spec sheet
+    fields (oil type, tire size, etc).
+
+    Stripped on the way out: VIN, nickname, current_mileage, image_url,
+    ha_entity_id, theme_color, share_token, fuel_logs, logbook, all
+    last_service_* fields, and any internal ids. The output is meant to be
+    pasted into a fresh vehicle as a starting template — nothing here
+    identifies the owner or their personal usage history.
+    """
+    db = load_db()
+    if vin not in db.get("vehicles", {}):
+        return jsonify({"error": "vehicle not found"}), 404
+    v = db["vehicles"][vin]
+
+    def _scrub_garage(items):
+        return [{"name": i.get("name", ""), "value": i.get("value", "")}
+                for i in (items or [])]
+
+    blueprint = {
+        "blueprint_version": 1,
+        "exported_at": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "year": v.get("year", ""),
+        "make": v.get("make", ""),
+        "model": v.get("model", ""),
+        "services": [
+            {
+                "category": s.get("category", "Other"),
+                "name": s.get("name", ""),
+                "interval_months": s.get("interval_months", 0),
+                "interval_miles": s.get("interval_miles", 0),
+                "parts_info": s.get("parts_info", ""),
+                "garage_parts": _scrub_garage(s.get("garage_parts", [])),
+                "garage_torque": _scrub_garage(s.get("garage_torque", [])),
+            }
+            for s in v.get("services", [])
+        ],
+        "torque_specs": [
+            {
+                "component": t.get("component", ""),
+                "torque": t.get("torque", ""),
+                "labels": t.get("labels", ""),
+            }
+            for t in v.get("torque_specs", [])
+        ],
+        "specs": {
+            key: v.get("specs", {}).get(key, "")
+            for key in ["engine_oil", "oil_filter", "tire_size",
+                        "tire_pressure", "wiper_blades", "manual_url"]
+        },
+    }
+
+    # Build a clean filename from year/make/model; fall back to the slug.
+    parts = [str(p).strip() for p in (v.get("year"), v.get("make"), v.get("model")) if str(p).strip()]
+    slug = "-".join(parts) if parts else vin
+    safe_slug = re.sub(r"[^A-Za-z0-9._-]+", "_", slug)
+    filename = f"blueprint-{safe_slug}.json"
+
+    return Response(
+        json.dumps(blueprint, indent=2),
+        mimetype="application/json",
+        headers={"Content-Disposition": f"attachment;filename={filename}"},
+    )
+
 
 @app.route('/api/<vin>/export_logbook')
 def export_logbook(vin):

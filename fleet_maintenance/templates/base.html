@@ -64,37 +64,18 @@
 
     {% if vehicle_data %}
     <style>
-        :root {
-            --accent: {
-                    {
-                    vehicle_data.theme_color
-                }
-            }
+        /* The Jinja substitution below was previously split across multiple
+           lines by an auto-formatter (`{ { vehicle_data.theme_color } }`),
+           which Jinja does NOT recognise as an expression — so --accent
+           never got a value and every bg-accent / text-accent / border-accent
+           class silently fell back to nothing. Keep this on one line. */
+        :root { --accent: {{ vehicle_data.theme_color or '#2563eb' }}; }
 
-            ;
-        }
-
-        .bg-accent {
-            background-color: var(--accent);
-            color: #fff;
-        }
-
-        .bg-accent:hover {
-            filter: brightness(0.85);
-        }
-
-        .text-accent {
-            color: var(--accent);
-        }
-
-        .border-accent {
-            border-color: var(--accent);
-        }
-
-        .focus-ring-accent:focus {
-            outline: none;
-            box-shadow: 0 0 0 2px var(--accent);
-        }
+        .bg-accent { background-color: var(--accent); color: #fff; }
+        .bg-accent:hover { filter: brightness(0.85); }
+        .text-accent { color: var(--accent); }
+        .border-accent { border-color: var(--accent); }
+        .focus-ring-accent:focus { outline: none; box-shadow: 0 0 0 2px var(--accent); }
     </style>
     {% endif %}
 
@@ -419,7 +400,27 @@
             try { localStorage.setItem('fleetBgTexture', texture); } catch (e) { }
         }
 
+        function _firstVisibleTabId() {
+            // Tab buttons live inside <li> elements that may have been hidden
+            // by Jinja conditionals (see global_settings.hidden_tabs). Use
+            // offsetParent === null as a cheap "is rendered + visible" probe.
+            const candidates = ['summary','timeline','intervals','logbook','fuel','specs'];
+            for (const t of candidates) {
+                const btn = document.getElementById('btn-' + t);
+                if (btn && btn.offsetParent !== null) return t;
+            }
+            return null;
+        }
+
         function showTab(tabId) {
+            // If caller asked for a tab that's been hidden by the user, pick
+            // the first visible one instead so we never leave the page blank.
+            const requestedBtn = document.getElementById('btn-' + tabId);
+            if (tabId !== 'add-vehicle' && (!requestedBtn || requestedBtn.offsetParent === null)) {
+                const fallback = _firstVisibleTabId();
+                if (fallback) tabId = fallback;
+            }
+
             document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
             document.querySelectorAll('.tab-btn').forEach(el => {
                 el.classList.remove('border-accent', 'text-accent');

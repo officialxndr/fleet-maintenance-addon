@@ -1,8 +1,29 @@
 <div id="add-vehicle" class="{% if vehicle_data %}hidden tab-content{% else %}block{% endif %} w-full md:w-3/4 max-w-4xl mx-auto bg-gray-50 dark:bg-zinc-900 p-8 rounded-xl border dark:border-zinc-800 mt-8 relative z-0 admin-only">
     <h2 class="text-2xl font-bold mb-2 text-gray-800 dark:text-white">Add a New Vehicle</h2>
+
+    {# Error banner: populated by /api/add_vehicle when validation fails. #}
+    {% if request.args.get('add_error') %}
+        {% set _err = request.args.get('add_error') %}
+        {% set _err_msg = {
+            'invalid_vin':   'That VIN doesn\'t look right. A standard VIN is 17 characters, letters and numbers only (no I, O, or Q). Leave the field blank if your vehicle doesn\'t have a 17-character VIN.',
+            'duplicate_vin': 'A vehicle with that VIN is already in your fleet.',
+        }.get(_err, 'Could not add vehicle. Please check the form and try again.') %}
+        <div class="mb-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-900/40 text-red-700 dark:text-red-300 rounded-lg p-3 text-sm flex items-start gap-2">
+            <span class="text-base leading-none">⚠️</span>
+            <span>{{ _err_msg }}</span>
+        </div>
+    {% endif %}
+
     <form action="{{ ingress_path }}/api/add_vehicle" method="POST" enctype="multipart/form-data" class="space-y-4">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div><label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1 uppercase tracking-wide">VIN Number</label><div class="flex gap-2"><input type="text" id="new_vin" name="vin" required class="text-sm border dark:border-zinc-700 rounded-lg p-2.5 w-full uppercase bg-white dark:bg-zinc-800 dark:text-white focus-ring-accent"><button type="button" id="decode_btn" onclick="runVinDecode()" class="bg-gray-800 dark:bg-zinc-700 text-white font-medium text-sm px-4 rounded-lg transition hover:bg-gray-900">Decode</button></div></div>
+            <div>
+                <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1 uppercase tracking-wide">VIN Number <span class="text-gray-400 normal-case font-normal">(optional)</span></label>
+                <div class="flex gap-2">
+                    <input type="text" id="new_vin" name="vin" maxlength="17" pattern="[A-HJ-NPR-Za-hj-npr-z0-9]{17}" title="17 characters, letters and numbers only (excluding I, O, Q)" class="text-sm border dark:border-zinc-700 rounded-lg p-2.5 w-full uppercase bg-white dark:bg-zinc-800 dark:text-white focus-ring-accent">
+                    <button type="button" id="decode_btn" onclick="runVinDecode()" class="bg-gray-800 dark:bg-zinc-700 text-white font-medium text-sm px-4 rounded-lg transition hover:bg-gray-900 whitespace-nowrap">Decode</button>
+                </div>
+                <p class="text-[10px] text-gray-500 dark:text-zinc-500 mt-1">Leave blank if your vehicle doesn't have one — we'll generate an internal id.</p>
+            </div>
             <div><label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1 uppercase tracking-wide">Nickname (Optional)</label><input type="text" name="nickname" placeholder="e.g. My Daily Driver" class="text-sm border dark:border-zinc-700 rounded-lg p-2.5 w-full bg-white dark:bg-zinc-800 dark:text-white focus-ring-accent"></div>
         </div>
         <div class="grid grid-cols-3 gap-4">
@@ -10,7 +31,11 @@
             <div><label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1 uppercase tracking-wide">Make</label><input type="text" id="new_make" name="make" required class="text-sm border dark:border-zinc-700 rounded-lg p-2.5 w-full bg-white dark:bg-zinc-800 dark:text-white focus-ring-accent"></div>
             <div><label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1 uppercase tracking-wide">Model</label><input type="text" id="new_model" name="model" required class="text-sm border dark:border-zinc-700 rounded-lg p-2.5 w-full bg-white dark:bg-zinc-800 dark:text-white focus-ring-accent"></div>
         </div>
-        <div><label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1 uppercase tracking-wide">Current Mileage</label><div class="flex items-center gap-1.5 w-full"><input type="number" name="mileage" required class="text-sm border dark:border-zinc-700 rounded-lg p-2.5 w-full bg-white dark:bg-zinc-800 dark:text-white focus-ring-accent"><span class="text-xs text-gray-500 dark:text-zinc-400 font-medium">{{ global_settings.unit }}</span></div></div>
+        <div>
+            <label class="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1 uppercase tracking-wide">Current Mileage <span class="text-gray-400 normal-case font-normal">(optional)</span></label>
+            <div class="flex items-center gap-1.5 w-full"><input type="number" name="mileage" min="0" placeholder="0" class="text-sm border dark:border-zinc-700 rounded-lg p-2.5 w-full bg-white dark:bg-zinc-800 dark:text-white focus-ring-accent"><span class="text-xs text-gray-500 dark:text-zinc-400 font-medium">{{ global_settings.unit }}</span></div>
+            <p class="text-[10px] text-gray-500 dark:text-zinc-500 mt-1">Defaults to 0. If you link a Home Assistant sensor below, this will be overwritten automatically.</p>
+        </div>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-gray-200 dark:border-zinc-700 mt-4">
             <div>
                 <p class="text-sm font-bold text-gray-800 dark:text-gray-200 mb-2">Integrations</p>

@@ -13,14 +13,15 @@
         {% include "_header.html" %}
         
         {% if vehicle_data %}
+            {% set hidden_tabs = (global_settings.hidden_tabs or '').split(',') %}
             <div class="text-sm font-medium text-center text-gray-500 dark:text-zinc-400 border-b border-gray-200 dark:border-zinc-800 mb-6 mt-4">
                 <ul class="flex flex-wrap -mb-px">
-                    <li class="mr-2"><button id="btn-summary" onclick="showTab('summary')" class="tab-btn inline-block p-4 border-b-2 border-transparent rounded-t-lg transition-colors">Summary</button></li>
-                    <li class="mr-2"><button id="btn-timeline" onclick="showTab('timeline')" class="tab-btn inline-block p-4 border-b-2 border-transparent rounded-t-lg transition-colors">Timeline</button></li>
-                    <li class="mr-2 admin-only"><button id="btn-intervals" onclick="showTab('intervals')" class="tab-btn inline-block p-4 border-b-2 border-transparent rounded-t-lg transition-colors">Intervals & Edit</button></li>
-                    <li class="mr-2 admin-only"><button id="btn-logbook" onclick="showTab('logbook')" class="tab-btn inline-block p-4 border-b-2 border-transparent rounded-t-lg transition-colors">Logbook</button></li>
-                    <li class="mr-2"><button id="btn-fuel" onclick="showTab('fuel')" class="tab-btn inline-block p-4 border-b-2 border-transparent rounded-t-lg transition-colors">Fuel Tracker</button></li>
-                    <li class="mr-2 admin-only"><button id="btn-specs" onclick="showTab('specs')" class="tab-btn inline-block p-4 border-b-2 border-transparent rounded-t-lg transition-colors">Glovebox & Specs</button></li>
+                    {% if 'summary' not in hidden_tabs %}<li class="mr-2"><button id="btn-summary" onclick="showTab('summary')" class="tab-btn inline-block p-4 border-b-2 border-transparent rounded-t-lg transition-colors">Summary</button></li>{% endif %}
+                    {% if 'timeline' not in hidden_tabs %}<li class="mr-2"><button id="btn-timeline" onclick="showTab('timeline')" class="tab-btn inline-block p-4 border-b-2 border-transparent rounded-t-lg transition-colors">Timeline</button></li>{% endif %}
+                    {% if 'intervals' not in hidden_tabs %}<li class="mr-2 admin-only"><button id="btn-intervals" onclick="showTab('intervals')" class="tab-btn inline-block p-4 border-b-2 border-transparent rounded-t-lg transition-colors">Intervals & Edit</button></li>{% endif %}
+                    {% if 'logbook' not in hidden_tabs %}<li class="mr-2 admin-only"><button id="btn-logbook" onclick="showTab('logbook')" class="tab-btn inline-block p-4 border-b-2 border-transparent rounded-t-lg transition-colors">Logbook</button></li>{% endif %}
+                    {% if 'fuel' not in hidden_tabs %}<li class="mr-2"><button id="btn-fuel" onclick="showTab('fuel')" class="tab-btn inline-block p-4 border-b-2 border-transparent rounded-t-lg transition-colors">Fuel Tracker</button></li>{% endif %}
+                    {% if 'specs' not in hidden_tabs %}<li class="mr-2 admin-only"><button id="btn-specs" onclick="showTab('specs')" class="tab-btn inline-block p-4 border-b-2 border-transparent rounded-t-lg transition-colors">Glovebox & Specs</button></li>{% endif %}
                 </ul>
             </div>
             

@@ -68,6 +68,33 @@
                 </div>
             </div>
 
+            {# --- Tab Visibility ----------------------------------------------- #}
+            {# Each checkbox represents one tab; the user ticks the ones they
+               want visible. The hidden marker tells the backend "this form
+               submission contains tab settings" so untouched POSTs (e.g. from
+               the share view) don't accidentally hide every tab.            #}
+            {% set hidden_tabs = (global_settings.hidden_tabs or '').split(',') %}
+            <div class="space-y-2">
+                <h4 class="text-sm font-bold text-gray-800 dark:text-gray-200 border-b border-gray-200 dark:border-zinc-700 pb-1">Visible Tabs</h4>
+                <p class="text-[11px] text-gray-500 dark:text-zinc-400 -mt-1">Uncheck a tab to hide it from the navigation bar.</p>
+                <input type="hidden" name="tab_visibility_submitted" value="1">
+                <div class="grid grid-cols-2 md:grid-cols-3 gap-2">
+                    {% for tid, label in [
+                        ('summary',   'Summary'),
+                        ('timeline',  'Timeline'),
+                        ('intervals', 'Intervals & Edit'),
+                        ('logbook',   'Logbook'),
+                        ('fuel',      'Fuel Tracker'),
+                        ('specs',     'Glovebox & Specs'),
+                    ] %}
+                    <label class="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer p-2 border border-gray-300 dark:border-zinc-700 rounded-lg bg-gray-50 dark:bg-zinc-800 hover:border-accent transition">
+                        <input type="checkbox" name="visible_tab" value="{{ tid }}" class="w-4 h-4 rounded text-accent focus-ring-accent" {% if tid not in hidden_tabs %}checked{% endif %}>
+                        <span class="truncate">{{ label }}</span>
+                    </label>
+                    {% endfor %}
+                </div>
+            </div>
+
             <div class="flex gap-2 w-full pt-4 border-t border-gray-200 dark:border-zinc-800">
                 <button type="submit" class="flex-1 bg-accent hover:brightness-90 text-white font-bold py-2 px-4 rounded-lg shadow-sm transition">Save Changes</button>
             </div>

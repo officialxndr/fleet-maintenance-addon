@@ -81,6 +81,10 @@ DEFAULT_GLOBAL_SETTINGS = {
     "mqtt_enabled": "on",
     "temp_entity_id": "",
     "current_temp": None,
+    # Comma-separated tab ids the user has chosen to hide (set via the
+    # global settings modal). Valid ids: summary, timeline, intervals,
+    # logbook, fuel, specs.
+    "hidden_tabs": "",
 }
 
 DEFAULT_SERVICES_FALLBACK = [
