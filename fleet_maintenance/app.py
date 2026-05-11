@@ -1,7 +1,8 @@
 from flask import Flask, request, jsonify, render_template, redirect, Response, send_from_directory
 import csv
+import json  # FIX: previously missing; broke /api/export_db
 import uuid
-import requests  # <--- ADD THIS LINE
+import requests
 from datetime import datetime
 from io import StringIO
 from core import load_db, save_db, calculate_status, calculate_fuel_stats, calculate_adm, get_ha_sensors, parse_date, mqtt_client
@@ -216,22 +217,32 @@ def update_torque(vin, t_id):
         return jsonify({"status": "success"})
     return redirect(f"{get_base_path()}/vehicle/{vin}?tab=specs")
 
+# Templates use asymmetric key names: "garage_parts" (plural) for parts and
+# "garage_torque" (singular) for torque items. The previous implementation
+# constructed the key dynamically and got both wrong (torque ended up under
+# "garage_torques", part deletes hit "garage_part") — which is exactly why
+# adding a torque item appeared to vanish and deleting a part did nothing.
+# Map types to the correct fixed keys instead of guessing with string math.
+_GARAGE_KEYS = {"part": "garage_parts", "torque": "garage_torque"}
+
+def _normalize_garage_type(raw):
+    t = (raw or "").strip().lower().rstrip("s")
+    return t if t in _GARAGE_KEYS else None
+
 @app.route('/api/<vin>/service/<service_id>/add_garage_item', methods=['POST'])
 def add_garage_item(vin, service_id):
     db = load_db()
-    raw_type = request.form.get("type", "").strip().lower()
-    # Normalize so both "part" and "parts" map to the correct "garage_parts" key
-    item_type = raw_type.rstrip("s")  # "parts"->"part", "torque"->"torque", "part"->"part"
+    item_type = _normalize_garage_type(request.form.get("type", ""))
     name = request.form.get("name", "").strip()
     value = request.form.get("value", "").strip()
     new_id = str(uuid.uuid4())[:8]
     saved = False
 
-    if name and value and item_type and vin in db.get("vehicles", {}):
+    if item_type and name and value and vin in db.get("vehicles", {}):
+        key = _GARAGE_KEYS[item_type]
         for s in db["vehicles"][vin].get("services", []):
             if s["id"] == service_id:
-                target_list = s.setdefault(f"garage_{item_type}s", [])
-                target_list.append({"id": new_id, "name": name, "value": value})
+                s.setdefault(key, []).append({"id": new_id, "name": name, "value": value})
                 saved = True
                 break
         if saved:
@@ -245,11 +256,13 @@ def add_garage_item(vin, service_id):
 
 @app.route('/api/<vin>/service/<service_id>/delete_garage_item/<item_type>/<item_id>', methods=['POST'])
 def delete_garage_item(vin, service_id, item_type, item_id):
+    item_type = _normalize_garage_type(item_type)
     db = load_db()
-    if vin in db.get("vehicles", {}):
+    if item_type and vin in db.get("vehicles", {}):
+        key = _GARAGE_KEYS[item_type]
         for s in db["vehicles"][vin].get("services", []):
             if s["id"] == service_id:
-                s[f"garage_{item_type}"] = [i for i in s.get(f"garage_{item_type}", []) if i["id"] != item_id]
+                s[key] = [i for i in s.get(key, []) if i.get("id") != item_id]
                 break
         save_db(db, sync_mqtt=False)
         
