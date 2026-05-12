@@ -1,9 +1,7 @@
 services:
   - type: web
     name: fleet-maintenance-demo
-    env: python
-    buildCommand: pip install -r fleet_maintenance/requirements.txt
-    startCommand: cd fleet_maintenance && python app.py
+    env: docker
     envVars:
       - key: DEMO_MODE
         value: "true"
