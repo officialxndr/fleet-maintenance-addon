@@ -189,6 +189,8 @@ def submit_blueprint(blueprint_data):
     or {"status": "error", "message": "..."} on failure.
     If COMMUNITY_SUBMIT_URL is not configured, returns a config_needed error.
     """
+    if os.environ.get('DEMO_MODE', '').lower() in ('1', 'true', 'yes'):
+        return {"status": "error", "message": "Blueprint submission is disabled in the demo."}
     if not COMMUNITY_SUBMIT_URL:
         return {"status": "error", "message": "Submission endpoint not configured."}
     try:

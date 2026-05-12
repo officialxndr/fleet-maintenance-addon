@@ -1,6 +1,7 @@
 from flask import Flask, request, jsonify, render_template, redirect, Response, send_from_directory
 import csv
 import json  # FIX: previously missing; broke /api/export_db
+import os
 import re
 import uuid
 import requests
@@ -10,6 +11,8 @@ from core import load_db, save_db, calculate_status, calculate_fuel_stats, calcu
 import community_blueprints as cbp
 
 app = Flask(__name__, static_folder='static')
+
+DEMO_MODE = os.environ.get('DEMO_MODE', '').lower() in ('1', 'true', 'yes')
 
 # Canonical list of UI tabs (matches button ids in templates/index.html minus the "btn-" prefix).
 ALL_TABS = ["summary", "timeline", "intervals", "logbook", "fuel", "specs"]
@@ -28,6 +31,9 @@ def _generate_local_id():
 
 @app.context_processor
 def inject_ingress_path(): return dict(ingress_path=request.headers.get("X-Ingress-Path", ""))
+
+@app.context_processor
+def inject_demo_mode(): return dict(demo_mode=DEMO_MODE)
 
 def get_base_path(): return request.headers.get("X-Ingress-Path", "")
 
@@ -904,6 +910,8 @@ def refresh_community_cache():
 
 @app.route('/api/community_blueprints/contribute', methods=['POST'])
 def contribute_blueprint():
+    if DEMO_MODE:
+        return jsonify({'status': 'error', 'message': 'Blueprint submission is disabled in the demo.'}), 403
     db = load_db()
     vin = request.form.get('vin', '')
     if vin not in db.get('vehicles', {}):
@@ -928,4 +936,7 @@ def contribute_blueprint():
 
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
+    if DEMO_MODE:
+        from demo_seed import seed_demo_data
+        seed_demo_data()
+    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))

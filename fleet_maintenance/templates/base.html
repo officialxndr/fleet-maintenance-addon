@@ -1128,6 +1128,13 @@
 <body
     class="bg-gray-100 dark:bg-zinc-950 text-gray-800 dark:text-gray-200 p-4 font-sans transition-colors duration-200">
 
+    {% if demo_mode %}
+    <div class="fixed top-0 left-0 right-0 z-[9999] bg-blue-600 text-white text-center text-sm py-2 px-4">
+        <strong>Live Demo</strong> &mdash; Explore freely. Data resets on each server restart. Blueprint submission is disabled.
+    </div>
+    <div class="h-10"></div>
+    {% endif %}
+
     {% block content %}{% endblock %}
 
     <!-- Bulk Edit Modal (intervals + logbook) -->
