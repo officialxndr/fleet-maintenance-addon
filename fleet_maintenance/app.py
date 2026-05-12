@@ -901,7 +901,7 @@ def get_community_blueprint(bp_id):
 
 @app.route('/api/community_blueprints/repo_url')
 def community_repo_url():
-    return jsonify({'url': cbp.get_repo_url(), 'submit_enabled': bool(cbp.COMMUNITY_SUBMIT_URL)})
+    return jsonify({'url': cbp.get_repo_url(), 'submit_enabled': bool(cbp.COMMUNITY_SUBMIT_URL) and not DEMO_MODE})
 
 @app.route('/api/community_blueprints/refresh_cache', methods=['POST'])
 def refresh_community_cache():
