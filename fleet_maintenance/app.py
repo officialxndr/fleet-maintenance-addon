@@ -414,11 +414,21 @@ def log_entry_and_sync(vin, service_name, date_str, mileage, notes, cost_parts, 
 @app.route('/api/<vin>/add_log', methods=['POST'])
 def add_log(vin):
     db = load_db()
-    log_entry_and_sync(vin, request.form.get("service_name"), request.form.get("date"), int(request.form.get("mileage", 0)), request.form.get("notes", ""), float(request.form.get("cost_parts", 0) or 0), float(request.form.get("cost_labor", 0) or 0), db, track_interval=(request.form.get("action", "log_and_track") == "log_and_track"))
+    service_name = request.form.get("service_name")
+    log_entry_and_sync(vin, service_name, request.form.get("date"), int(request.form.get("mileage", 0)), request.form.get("notes", ""), float(request.form.get("cost_parts", 0) or 0), float(request.form.get("cost_labor", 0) or 0), db, track_interval=(request.form.get("action", "log_and_track") == "log_and_track"))
     save_db(db)
     if request.headers.get('Accept') == 'application/json':
         new_log = db["vehicles"][vin]["logbook"][-1]
-        return jsonify({"status": "success", "log": new_log})
+        global_settings = db.get("global_settings", {})
+        date_fmt = global_settings.get("date_format", "YYYY-MM-DD")
+        updated_service = None
+        for s in calculate_status(db["vehicles"][vin], global_settings):
+            if s.get("id") == service_name or s.get("name", "").lower() == service_name.lower():
+                s["last_service_date_display"] = format_date_filter(s.get("last_service_date_formatted", ""), date_fmt)
+                s["due_date_display"] = format_date_filter(s.get("due_date_str", ""), date_fmt)
+                updated_service = s
+                break
+        return jsonify({"status": "success", "log": new_log, "service": updated_service})
     return redirect(f"{get_base_path()}/vehicle/{vin}")
 
 @app.route('/api/<vin>/update_log/<log_id>', methods=['POST'])

@@ -322,6 +322,7 @@
                     btn.textContent = '✓ Logged!';
                     btn.classList.add('opacity-60');
                     if (data.log) injectLogEntry(data.log);
+                    if (data.service) updateServiceCard(container, data.service);
                     setTimeout(() => { btn.textContent = '✓ Log Service'; btn.disabled = false; btn.classList.remove('opacity-60'); }, 2000);
                 } else { throw new Error('Failed'); }
             } catch (err) {
@@ -360,6 +361,106 @@
                 const el = document.getElementById(`log-entry-new-${log.id}`);
                 if (el) { el.classList.remove('ring-2', 'ring-green-400', 'dark:ring-green-600'); }
             }, 3000);
+        }
+
+        function updateServiceCard(container, svc) {
+            const card = container.closest('.service-card');
+            if (!card) return;
+            const unit = '{{ global_settings.unit }}';
+
+            card.dataset.status = svc.status;
+            card.dataset.priority = svc.priority;
+
+            const allStatusClasses = [
+                'bg-red-50','dark:bg-red-900/10','border-red-200','dark:border-red-900/30',
+                'bg-yellow-50','dark:bg-yellow-900/10','border-yellow-200','dark:border-yellow-900/30',
+                'bg-blue-50','dark:bg-blue-900/10','border-blue-200','dark:border-blue-900/30',
+                'bg-gray-50','dark:bg-zinc-800/50','opacity-90','shadow-sm'
+            ];
+            allStatusClasses.forEach(cls => card.classList.remove(cls));
+            const cardClasses = {
+                'Past Due':       ['bg-red-50','dark:bg-red-900/10','border-red-200','dark:border-red-900/30','shadow-sm'],
+                'Coming Up':      ['bg-yellow-50','dark:bg-yellow-900/10','border-yellow-200','dark:border-yellow-900/30'],
+                'Needs Baseline': ['bg-blue-50','dark:bg-blue-900/10','border-blue-200','dark:border-blue-900/30','shadow-sm'],
+                'All Good':       ['bg-gray-50','dark:bg-zinc-800/50','opacity-90']
+            };
+            (cardClasses[svc.status] || cardClasses['All Good']).forEach(cls => card.classList.add(cls));
+
+            const badge = card.querySelector('.flex.justify-between.items-start > span');
+            if (badge) {
+                badge.textContent = svc.status;
+                const allBadgeClasses = [
+                    'bg-red-100','text-red-700','border-red-200','dark:bg-red-900/30','dark:text-red-400','dark:border-red-800',
+                    'bg-yellow-100','text-yellow-700','border-yellow-200','dark:bg-yellow-900/30','dark:text-yellow-400','dark:border-yellow-800',
+                    'bg-blue-100','text-blue-700','border-blue-200','dark:bg-blue-900/30','dark:text-blue-400','dark:border-blue-800',
+                    'bg-green-100','text-green-700','border-green-200','dark:bg-green-900/30','dark:text-green-400','dark:border-green-800'
+                ];
+                allBadgeClasses.forEach(cls => badge.classList.remove(cls));
+                const badgeClasses = {
+                    'Past Due':       ['bg-red-100','text-red-700','border-red-200','dark:bg-red-900/30','dark:text-red-400','dark:border-red-800'],
+                    'Coming Up':      ['bg-yellow-100','text-yellow-700','border-yellow-200','dark:bg-yellow-900/30','dark:text-yellow-400','dark:border-yellow-800'],
+                    'Needs Baseline': ['bg-blue-100','text-blue-700','border-blue-200','dark:bg-blue-900/30','dark:text-blue-400','dark:border-blue-800'],
+                    'All Good':       ['bg-green-100','text-green-700','border-green-200','dark:bg-green-900/30','dark:text-green-400','dark:border-green-800']
+                };
+                (badgeClasses[svc.status] || badgeClasses['All Good']).forEach(cls => badge.classList.add(cls));
+            }
+
+            const title = card.querySelector('h3');
+            if (title) {
+                title.classList.toggle('text-red-700', svc.status === 'Past Due');
+                title.classList.toggle('dark:text-red-400', svc.status === 'Past Due');
+                title.classList.toggle('text-gray-800', svc.status !== 'Past Due');
+                title.classList.toggle('dark:text-gray-100', svc.status !== 'Past Due');
+            }
+
+            const statsRows = card.querySelectorAll('.text-xs.space-y-2 .flex.justify-between.items-center');
+            const lastServiceSpan = statsRows[0] ? statsRows[0].querySelector('span:last-child') : null;
+            const dueAtSpan = statsRows[1] ? statsRows[1].querySelector('span:last-child') : null;
+            const remainingRow = card.querySelector('.text-xs.space-y-2 .flex.justify-between.mt-3');
+            const remainingSpan = remainingRow ? remainingRow.querySelector('span:last-child') : null;
+
+            if (lastServiceSpan) {
+                if (svc.status === 'Needs Baseline') {
+                    lastServiceSpan.textContent = 'Never Logged';
+                } else {
+                    lastServiceSpan.innerHTML = `${svc.last_service_date_display} <span class="text-gray-300 dark:text-zinc-600 mx-1">|</span> ${Number(svc.last_service_miles).toLocaleString()} ${unit}`;
+                }
+            }
+
+            if (dueAtSpan) {
+                if (svc.status === 'Needs Baseline') {
+                    dueAtSpan.textContent = 'TBD';
+                    dueAtSpan.classList.remove('border-accent', 'text-accent');
+                } else {
+                    const prefix = svc.predicted ? '🔮 ' : '';
+                    dueAtSpan.innerHTML = `${prefix}${svc.due_date_display} <span class="text-gray-300 dark:text-zinc-600 mx-1">|</span> ${Number(svc.due_miles).toLocaleString()} ${unit}`;
+                    dueAtSpan.classList.toggle('border-accent', !!svc.predicted);
+                    dueAtSpan.classList.toggle('text-accent', !!svc.predicted);
+                }
+            }
+
+            if (remainingSpan) {
+                remainingSpan.classList.toggle('text-red-600', svc.status === 'Past Due');
+                remainingSpan.classList.toggle('dark:text-red-400', svc.status === 'Past Due');
+                remainingSpan.classList.toggle('text-gray-800', svc.status !== 'Past Due');
+                remainingSpan.classList.toggle('dark:text-gray-100', svc.status !== 'Past Due');
+                if (svc.status === 'Needs Baseline') {
+                    remainingSpan.textContent = 'Log service to track';
+                } else {
+                    remainingSpan.innerHTML = `${Number(svc.miles_remaining).toLocaleString()} ${unit} <span class="text-gray-300 dark:text-zinc-600 mx-1">|</span> ${svc.months_remaining} mo`;
+                }
+            }
+
+            const garageBtn = card.querySelector('[data-service]');
+            if (garageBtn) {
+                const cached = JSON.parse(garageBtn.dataset.service || '{}');
+                const updated = Object.assign({}, cached, {
+                    status: svc.status, last_service_date: svc.last_service_date,
+                    last_service_miles: svc.last_service_miles
+                });
+                garageBtn.dataset.service = JSON.stringify(updated);
+                if (window._servicesCache && updated.id) window._servicesCache[updated.id] = updated;
+            }
         }
 
         function closeServiceDetails() {
