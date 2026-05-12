@@ -20,6 +20,9 @@ Try the full app without installing anything. Two pre-configured vehicles are lo
 
 ## What's New
 
+### 🔎 Inspection Interval Tracking
+Some services need to be checked before they need to be replaced. Brake pads are a good example — you might replace them every 4 years, but you should inspect how much life is left after 2. Each service can now have an optional **inspection interval** set independently of its full replacement interval. When the inspection window is reached, a secondary status badge appears on the service card and a dedicated **Inspection** section shows the inspect-due date, remaining mileage, and remaining months. Logging an inspection resets only the inspection timer; logging a full service resets both. Inspection data is fully integrated with MQTT, CSV import/export, and the Community Blueprint database.
+
 ### 🌐 Community Blueprint Database
 The biggest addition yet. When adding a new vehicle, the app now searches a community-maintained GitHub repository for matching configurations. If someone has already built out a thorough maintenance schedule for your make and model — services, part numbers, torque specs, garage toolcard items — you can import all of it in one click, or hand-pick exactly which services you want. No manual data entry required for common vehicles.
 
@@ -45,6 +48,7 @@ Logging a service on the Summary tab now instantly updates the card's status, co
 - [Feature Breakdown](#feature-breakdown)
   - [Multi-Vehicle Fleet Management](#multi-vehicle-fleet-management)
   - [Intelligent Interval Tracking](#intelligent-interval-tracking)
+  - [Inspection Interval Tracking](#inspection-interval-tracking)
   - [Garage Mode](#garage-mode)
   - [Vehicle Specs & Torque Reference](#vehicle-specs--torque-reference)
   - [Maintenance Logbook](#maintenance-logbook)
@@ -112,6 +116,37 @@ This is the core engine of the app. Every service item is tracked by **both time
 Services are automatically sorted by urgency — Past Due items always appear first, followed by Needs Baseline, Coming Up, and All Good.
 
 **Warning thresholds are fully configurable** under Global Settings. You can set the mileage window and month window that triggers the "Coming Up" status independently.
+
+---
+
+### Inspection Interval Tracking
+
+Some services have a natural "check it before you replace it" cadence. Brake pads wear at different rates depending on driving style. Air filters collect debris faster in dusty environments. Inspection Interval Tracking lets you set a **secondary interval** on any service — independent of the full replacement interval — so the app reminds you to inspect the item before it becomes overdue.
+
+**How it works:**
+
+When editing or adding a service in the Intervals tab, enable the **Inspection** toggle to reveal two additional fields: inspection interval in months and inspection interval in miles. These work exactly like the main service intervals — both can be set independently, and whichever threshold is hit first triggers the inspection reminder.
+
+The inspection timer uses the last full service as its baseline. Once you log an inspection, the inspection timer resets from that date and mileage. Logging a full service resets both timers simultaneously.
+
+**Inspection status levels:**
+
+| Status | Meaning |
+|---|---|
+| **Inspect Due** | The inspection interval has been exceeded |
+| **Inspect Soon** | Within your configured "Coming Up" warning threshold |
+| **All Good** | Inspection is not due soon |
+
+**On the Summary tab**, services with inspection intervals display a dedicated **Inspection** section on their card showing:
+- Inspect Due date and mileage
+- Remaining miles and months until inspection
+- A **Log Inspection** form (separate from Log Service) to record the check and reset the inspection timer
+
+Inspection log entries are written to the vehicle's logbook as `Service Name (Inspection)` so you have a full history of both services and inspections in one place.
+
+**MQTT:** Inspection status is published alongside the standard service attributes — `inspect_status` and `inspect_due_date` are included on every service sensor so Home Assistant automations can act on them.
+
+**Blueprints & CSV:** Inspection intervals are included in all blueprint exports (local, community, and file-based) and round-trip correctly through CSV import and export.
 
 ---
 
@@ -209,10 +244,12 @@ Fleet Maintenance includes built-in tooling to make working with external AI mod
 
 **CSV format for service intervals (`import_csv`):**
 ```
-Category,Service,Interval_Months,Interval_Miles,Parts_Info
-Engine,Engine Oil & Filter,12,5000,Motorcraft FL-820S / 5W-30
-Brakes,Brake Pads,60,50000,
+Category,Service,Interval_Months,Interval_Miles,Parts_Info,Inspect_Months,Inspect_Miles
+Engine,Engine Oil & Filter,12,5000,Motorcraft FL-820S / 5W-30,0,0
+Brakes,Brake Pads,60,50000,,24,20000
 ```
+
+`Inspect_Months` and `Inspect_Miles` are optional — leave them as `0` or omit them entirely to disable inspection tracking for that service.
 
 **CSV format for logbook import (`import_logbook`):**
 ```
@@ -283,6 +320,8 @@ Fleet Maintenance publishes all vehicle maintenance data to your MQTT broker usi
 - `due_date` — Projected due date
 - `category` — Service category (Engine, Brakes, etc.)
 - `service_name` — Full service name
+- `inspect_status` — Inspection status (`Inspect Due`, `Inspect Soon`, `All Good`, or `null` if no inspection interval is set)
+- `inspect_due_date` — Projected date the inspection is due (or `null`)
 
 Sensors are grouped under a device per vehicle (using the VIN as the unique identifier), and the device name defaults to the vehicle's nickname or `Year Make Model`.
 
@@ -353,6 +392,7 @@ Local blueprints are visible only on your instance and appear alongside communit
 | Data | Included |
 |---|---|
 | Service intervals (name, category, months, miles) | ✅ |
+| Inspection intervals (months, miles) | ✅ |
 | Garage parts per service | ✅ |
 | Garage torque specs per service | ✅ |
 | Vehicle-wide torque specs | ✅ |
