@@ -411,7 +411,7 @@
             };
             (cardClasses[svc.status] || cardClasses['All Good']).forEach(cls => card.classList.add(cls));
 
-            const badge = card.querySelector('.flex.justify-between.items-start > span');
+            const badge = card.querySelector('[data-status-badge]');
             if (badge) {
                 badge.textContent = svc.status;
                 const allBadgeClasses = [
@@ -473,6 +473,46 @@
                     remainingSpan.textContent = 'Log service to track';
                 } else {
                     remainingSpan.innerHTML = `${Number(svc.miles_remaining).toLocaleString()} ${unit} <span class="text-gray-300 dark:text-zinc-600 mx-1">|</span> ${svc.months_remaining} mo`;
+                }
+            }
+
+            // Update inspect badge
+            const inspectBadge = card.querySelector('[data-inspect-badge]');
+            if (inspectBadge) {
+                if (svc.inspect_status === 'Inspect Due' || svc.inspect_status === 'Inspect Soon') {
+                    inspectBadge.textContent = svc.inspect_status === 'Inspect Due' ? 'Inspect Due' : 'Inspect Soon';
+                    inspectBadge.className = 'text-[11px] font-bold px-2 py-1 rounded shadow-sm border bg-accent/10 text-accent border-accent/30';
+                    inspectBadge.classList.remove('hidden');
+                } else {
+                    inspectBadge.classList.add('hidden');
+                }
+            }
+
+            // Update inspect section rows
+            const inspectSection = card.querySelector('[data-inspect-section]');
+            if (inspectSection && svc.inspect_status) {
+                const inspectDueSpan = inspectSection.querySelector('[data-inspect-due]');
+                const inspectRemSpan = inspectSection.querySelector('[data-inspect-remaining]');
+                if (inspectDueSpan) {
+                    if (svc.inspect_due_date_display) {
+                        const milesPart = svc.inspect_due_miles ? ` <span class="text-gray-300 dark:text-zinc-600 mx-1">|</span> ${Number(svc.inspect_due_miles).toLocaleString()} ${unit}` : '';
+                        inspectDueSpan.innerHTML = `${svc.inspect_due_date_display}${milesPart}`;
+                    }
+                    const dueClasses = ['border-accent','text-accent'];
+                    if (svc.inspect_status === 'Inspect Due' || svc.inspect_status === 'Inspect Soon') {
+                        dueClasses.forEach(c => inspectDueSpan.classList.add(c));
+                    } else {
+                        dueClasses.forEach(c => inspectDueSpan.classList.remove(c));
+                    }
+                }
+                if (inspectRemSpan) {
+                    const miPart = svc.inspect_miles_remaining != null ? `${Number(svc.inspect_miles_remaining).toLocaleString()} ${unit}` : '';
+                    const moPart = svc.inspect_months_remaining != null ? `${svc.inspect_months_remaining} mo` : '';
+                    inspectRemSpan.innerHTML = [miPart, moPart].filter(Boolean).join(' <span class="text-gray-300 dark:text-zinc-600 mx-1">|</span> ');
+                    inspectRemSpan.classList.toggle('text-red-600', svc.inspect_status === 'Inspect Due');
+                    inspectRemSpan.classList.toggle('dark:text-red-400', svc.inspect_status === 'Inspect Due');
+                    inspectRemSpan.classList.toggle('text-gray-800', svc.inspect_status !== 'Inspect Due');
+                    inspectRemSpan.classList.toggle('dark:text-gray-100', svc.inspect_status !== 'Inspect Due');
                 }
             }
 
@@ -568,6 +608,19 @@
 
         function toggleVehicleSettings() {
             document.getElementById('settings-edit').classList.toggle('hidden');
+        }
+
+        function toggleInspection(cb, suffix) {
+            const fields = document.getElementById('inspect-fields-' + suffix);
+            if (!fields) return;
+            if (!cb.checked) {
+                fields.querySelectorAll('input[type="number"]').forEach(i => i.value = 0);
+                fields.classList.add('hidden');
+                fields.classList.remove('flex');
+            } else {
+                fields.classList.remove('hidden');
+                fields.classList.add('flex');
+            }
         }
 
         function toggleEdit(type, id) {

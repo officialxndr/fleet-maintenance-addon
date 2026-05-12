@@ -195,8 +195,12 @@ def add_vehicle():
                     "interval_months": int(s.get("interval_months", 0)),
                     "interval_miles": int(s.get("interval_miles", 0)),
                     "parts_info": str(s.get("parts_info", "")).strip(),
+                    "inspect_interval_months": int(s.get("inspect_interval_months", 0) or 0),
+                    "inspect_interval_miles": int(s.get("inspect_interval_miles", 0) or 0),
                     "last_service_miles": None,
                     "last_service_date": None,
+                    "last_inspect_date": None,
+                    "last_inspect_miles": None,
                     "garage_parts": [{"id": str(uuid.uuid4())[:8], "name": str(p.get("name", "")), "value": str(p.get("value", ""))} for p in (s.get("garage_parts") or [])],
                     "garage_torque": [{"id": str(uuid.uuid4())[:8], "name": str(t.get("name", "")), "value": str(t.get("value", ""))} for t in (s.get("garage_torque") or [])],
                 })
@@ -216,7 +220,7 @@ def add_vehicle():
             new_services_config = [dict(s, id=str(uuid.uuid4())[:8]) for s in db.get("default_services", [])]
 
     if request.form.get('update_baseline') == 'yes' and new_services_config:
-        db["default_services"] = [{"id": str(uuid.uuid4())[:8], "category": s["category"], "name": s["name"], "interval_months": s["interval_months"], "interval_miles": s["interval_miles"], "parts_info": s.get("parts_info", "")} for s in new_services_config]
+        db["default_services"] = [{"id": str(uuid.uuid4())[:8], "category": s["category"], "name": s["name"], "interval_months": s["interval_months"], "interval_miles": s["interval_miles"], "parts_info": s.get("parts_info", ""), "inspect_interval_months": int(s.get("inspect_interval_months", 0) or 0), "inspect_interval_miles": int(s.get("inspect_interval_miles", 0) or 0)} for s in new_services_config]
 
     if blueprint_id:
         svc_list = new_services_config  # already has garage_parts/torque from blueprint
@@ -417,7 +421,7 @@ def delete_default(service_id):
 @app.route('/api/<vin>/add_service', methods=['POST'])
 def add_service(vin):
     db = load_db()
-    db["vehicles"][vin]["services"].append({"id": str(uuid.uuid4())[:8], "category": request.form.get('category', 'Other').strip(), "name": request.form.get('name', 'New Service').strip(), "interval_months": int(request.form.get('interval_months', 12)), "interval_miles": int(request.form.get('interval_miles', 10000)), "parts_info": request.form.get('parts_info', '').strip(), "last_service_miles": None, "last_service_date": None, "garage_parts": [], "garage_torque": []})
+    db["vehicles"][vin]["services"].append({"id": str(uuid.uuid4())[:8], "category": request.form.get('category', 'Other').strip(), "name": request.form.get('name', 'New Service').strip(), "interval_months": int(request.form.get('interval_months', 12)), "interval_miles": int(request.form.get('interval_miles', 10000)), "parts_info": request.form.get('parts_info', '').strip(), "inspect_interval_months": int(request.form.get('inspect_interval_months', 0) or 0), "inspect_interval_miles": int(request.form.get('inspect_interval_miles', 0) or 0), "last_service_miles": None, "last_service_date": None, "last_inspect_date": None, "last_inspect_miles": None, "garage_parts": [], "garage_torque": []})
     save_db(db)
     return redirect(f"{get_base_path()}/vehicle/{vin}")
 
@@ -426,7 +430,33 @@ def update_service(vin, service_id):
     db = load_db()
     for s in db["vehicles"][vin]["services"]:
         if s["id"] == service_id:
-            s.update({"category": request.form.get('category', s["category"]), "name": request.form.get('name', s["name"]), "interval_months": int(request.form.get('interval_months', s["interval_months"])), "interval_miles": int(request.form.get('interval_miles', s["interval_miles"])), "parts_info": request.form.get('parts_info', '').strip()})
+            s.update({"category": request.form.get('category', s["category"]), "name": request.form.get('name', s["name"]), "interval_months": int(request.form.get('interval_months', s["interval_months"])), "interval_miles": int(request.form.get('interval_miles', s["interval_miles"])), "parts_info": request.form.get('parts_info', '').strip(), "inspect_interval_months": int(request.form.get('inspect_interval_months', s.get("inspect_interval_months", 0)) or 0), "inspect_interval_miles": int(request.form.get('inspect_interval_miles', s.get("inspect_interval_miles", 0)) or 0)})
+    save_db(db)
+    return redirect(f"{get_base_path()}/vehicle/{vin}")
+
+@app.route('/api/<vin>/log_inspection/<service_id>', methods=['POST'])
+def log_inspection(vin, service_id):
+    db = load_db()
+    date_str = request.form.get('date')
+    mileage  = int(request.form.get('mileage', 0))
+    notes    = request.form.get('notes', '')
+    service_name = None
+    for s in db["vehicles"][vin]["services"]:
+        if s["id"] == service_id:
+            s["last_inspect_date"]  = date_str
+            s["last_inspect_miles"] = mileage
+            service_name = s["name"]
+            break
+    if service_name:
+        db["vehicles"][vin].setdefault("logbook", []).append({
+            "id": str(uuid.uuid4())[:8],
+            "date": date_str,
+            "service": f"{service_name} (Inspection)",
+            "mileage": mileage,
+            "notes": notes,
+            "cost_parts": 0.0,
+            "cost_labor": 0.0,
+        })
     save_db(db)
     return redirect(f"{get_base_path()}/vehicle/{vin}")
 
@@ -452,11 +482,12 @@ def log_entry_and_sync(vin, service_name, date_str, mileage, notes, cost_parts, 
         found = False
         for s in v_data["services"]:
             if s["name"] == resolved_name:
-                s.update({"last_service_miles": mileage, "last_service_date": date_str})
+                s.update({"last_service_miles": mileage, "last_service_date": date_str,
+                          "last_inspect_date": None, "last_inspect_miles": None})
                 found = True
                 break
         if not found:
-            v_data["services"].append({"id": str(uuid.uuid4())[:8], "category": "Other", "name": resolved_name, "interval_months": 12, "interval_miles": 10000, "parts_info": "", "last_service_miles": mileage, "last_service_date": date_str, "garage_parts": [], "garage_torque": []})
+            v_data["services"].append({"id": str(uuid.uuid4())[:8], "category": "Other", "name": resolved_name, "interval_months": 12, "interval_miles": 10000, "parts_info": "", "inspect_interval_months": 0, "inspect_interval_miles": 0, "last_service_miles": mileage, "last_service_date": date_str, "last_inspect_date": None, "last_inspect_miles": None, "garage_parts": [], "garage_torque": []})
     v_data.setdefault("logbook", []).append({"id": str(uuid.uuid4())[:8], "date": date_str, "service": resolved_name, "mileage": mileage, "notes": notes, "cost_parts": cost_parts, "cost_labor": cost_labor})
 
 @app.route('/api/<vin>/add_log', methods=['POST'])
@@ -474,6 +505,7 @@ def add_log(vin):
             if s.get("id") == service_name or s.get("name", "").lower() == service_name.lower():
                 s["last_service_date_display"] = format_date_filter(s.get("last_service_date_formatted", ""), date_fmt)
                 s["due_date_display"] = format_date_filter(s.get("due_date_str", ""), date_fmt)
+                s["inspect_due_date_display"] = format_date_filter(s.get("inspect_due_date_str", "") or "", date_fmt) if s.get("inspect_due_date_str") else None
                 updated_service = s
                 break
         return jsonify({"status": "success", "log": new_log, "service": updated_service})
@@ -584,7 +616,7 @@ def import_baseline_csv(vin=None):
         db = load_db()
         new_defaults = []
         for row in csv.DictReader(StringIO(request.files['csv_file'].stream.read().decode("UTF8"), newline=None)):
-            new_defaults.append({"id": str(uuid.uuid4())[:8], "category": row.get('Category', 'Other').strip(), "name": row.get('Service', 'Unknown').strip(), "interval_months": int(row.get('Interval_Months', 0)), "interval_miles": int(row.get('Interval_Miles', 0)), "parts_info": row.get('Parts_Info', '').strip()})
+            new_defaults.append({"id": str(uuid.uuid4())[:8], "category": row.get('Category', 'Other').strip(), "name": row.get('Service', 'Unknown').strip(), "interval_months": int(row.get('Interval_Months', 0)), "interval_miles": int(row.get('Interval_Miles', 0)), "parts_info": row.get('Parts_Info', '').strip(), "inspect_interval_months": int(row.get('Inspect_Months', 0) or 0), "inspect_interval_miles": int(row.get('Inspect_Miles', 0) or 0)})
         if new_defaults:
             db["default_services"] = new_defaults
             save_db(db, sync_mqtt=False)
@@ -594,7 +626,7 @@ def import_baseline_csv(vin=None):
 def save_as_baseline(vin):
     db = load_db()
     if vin in db.get("vehicles", {}):
-        db["default_services"] = [{"id": str(uuid.uuid4())[:8], "category": s.get("category", "Other"), "name": s.get("name", "Unknown"), "interval_months": s.get("interval_months", 12), "interval_miles": s.get("interval_miles", 10000), "parts_info": s.get("parts_info", "")} for s in db["vehicles"][vin].get("services", [])]
+        db["default_services"] = [{"id": str(uuid.uuid4())[:8], "category": s.get("category", "Other"), "name": s.get("name", "Unknown"), "interval_months": s.get("interval_months", 12), "interval_miles": s.get("interval_miles", 10000), "parts_info": s.get("parts_info", ""), "inspect_interval_months": int(s.get("inspect_interval_months", 0) or 0), "inspect_interval_miles": int(s.get("inspect_interval_miles", 0) or 0)} for s in db["vehicles"][vin].get("services", [])]
         save_db(db, sync_mqtt=False)
     return redirect(f"{get_base_path()}/vehicle/{vin}")
 
@@ -604,8 +636,8 @@ def export_intervals(vin):
     if vin not in db.get("vehicles", {}): return redirect(f"{get_base_path()}/")
     si = StringIO()
     writer = csv.writer(si)
-    writer.writerow(['Category', 'Service', 'Interval_Months', 'Interval_Miles', 'Parts_Info'])
-    for s in db["vehicles"][vin].get("services", []): writer.writerow([s.get('category', ''), s.get('name', ''), s.get('interval_months', ''), s.get('interval_miles', ''), s.get('parts_info', '')])
+    writer.writerow(['Category', 'Service', 'Interval_Months', 'Interval_Miles', 'Parts_Info', 'Inspect_Months', 'Inspect_Miles'])
+    for s in db["vehicles"][vin].get("services", []): writer.writerow([s.get('category', ''), s.get('name', ''), s.get('interval_months', ''), s.get('interval_miles', ''), s.get('parts_info', ''), s.get('inspect_interval_months', 0), s.get('inspect_interval_miles', 0)])
     return Response(si.getvalue(), mimetype="text/csv", headers={"Content-Disposition": f"attachment;filename=intervals_{vin}.csv"})
 
 @app.route('/api/<vin>/import_csv', methods=['POST'])
@@ -615,8 +647,8 @@ def import_csv(vin):
         # Clear existing services only if checkbox is checked
         if request.form.get('clear_existing') == 'yes':
             db["vehicles"][vin]["services"] = []
-        for row in csv.DictReader(StringIO(request.files['csv_file'].stream.read().decode("UTF8"), newline=None)): 
-            db["vehicles"][vin]["services"].append({"id": str(uuid.uuid4())[:8], "category": row.get('Category', 'Other').strip(), "name": row.get('Service', 'Unknown').strip(), "interval_months": int(row.get('Interval_Months', 0)), "interval_miles": int(row.get('Interval_Miles', 0)), "parts_info": row.get('Parts_Info', '').strip(), "last_service_miles": None, "last_service_date": None, "garage_parts": [], "garage_torque": []})
+        for row in csv.DictReader(StringIO(request.files['csv_file'].stream.read().decode("UTF8"), newline=None)):
+            db["vehicles"][vin]["services"].append({"id": str(uuid.uuid4())[:8], "category": row.get('Category', 'Other').strip(), "name": row.get('Service', 'Unknown').strip(), "interval_months": int(row.get('Interval_Months', 0)), "interval_miles": int(row.get('Interval_Miles', 0)), "parts_info": row.get('Parts_Info', '').strip(), "inspect_interval_months": int(row.get('Inspect_Months', 0) or 0), "inspect_interval_miles": int(row.get('Inspect_Miles', 0) or 0), "last_service_miles": None, "last_service_date": None, "last_inspect_date": None, "last_inspect_miles": None, "garage_parts": [], "garage_torque": []})
         save_db(db)
     return redirect(f"{get_base_path()}/vehicle/{vin}")
 
@@ -777,8 +809,12 @@ def import_blueprint(vin):
                 "interval_months": int(s.get("interval_months", 0)),
                 "interval_miles": int(s.get("interval_miles", 0)),
                 "parts_info": str(s.get("parts_info", "")).strip(),
+                "inspect_interval_months": int(s.get("inspect_interval_months", 0) or 0),
+                "inspect_interval_miles": int(s.get("inspect_interval_miles", 0) or 0),
                 "last_service_miles": None,
                 "last_service_date": None,
+                "last_inspect_date": None,
+                "last_inspect_miles": None,
                 "garage_parts": [{"id": str(uuid.uuid4())[:8], "name": str(p.get("name", "")), "value": str(p.get("value", ""))} for p in (s.get("garage_parts") or [])],
                 "garage_torque": [{"id": str(uuid.uuid4())[:8], "name": str(t.get("name", "")), "value": str(t.get("value", ""))} for t in (s.get("garage_torque") or [])],
             })
@@ -852,7 +888,7 @@ def publish_blueprint():
         'year': v.get('year', ''),
         'make': v.get('make', ''),
         'model': v.get('model', ''),
-        'services': [{'category': s.get('category', 'Other'), 'name': s.get('name', ''), 'interval_months': s.get('interval_months', 0), 'interval_miles': s.get('interval_miles', 0), 'parts_info': s.get('parts_info', ''), 'garage_parts': _scrub(s.get('garage_parts', [])), 'garage_torque': _scrub(s.get('garage_torque', []))} for s in v.get('services', [])],
+        'services': [{'category': s.get('category', 'Other'), 'name': s.get('name', ''), 'interval_months': s.get('interval_months', 0), 'interval_miles': s.get('interval_miles', 0), 'parts_info': s.get('parts_info', ''), 'inspect_interval_months': int(s.get('inspect_interval_months', 0) or 0), 'inspect_interval_miles': int(s.get('inspect_interval_miles', 0) or 0), 'garage_parts': _scrub(s.get('garage_parts', [])), 'garage_torque': _scrub(s.get('garage_torque', []))} for s in v.get('services', [])],
         'torque_specs': [{'component': t.get('component', ''), 'torque': t.get('torque', ''), 'labels': t.get('labels', '')} for t in v.get('torque_specs', [])],
         'specs': {k: v.get('specs', {}).get(k, '') for k in ['engine_oil', 'oil_filter', 'tire_size', 'tire_pressure', 'wiper_blades', 'manual_url']},
     }
@@ -919,7 +955,7 @@ def contribute_blueprint():
         'year': v.get('year', ''),
         'make': v.get('make', ''),
         'model': v.get('model', ''),
-        'services': [{'category': s.get('category', 'Other'), 'name': s.get('name', ''), 'interval_months': s.get('interval_months', 0), 'interval_miles': s.get('interval_miles', 0), 'parts_info': s.get('parts_info', ''), 'garage_parts': _scrub(s.get('garage_parts', [])), 'garage_torque': _scrub(s.get('garage_torque', []))} for s in v.get('services', [])],
+        'services': [{'category': s.get('category', 'Other'), 'name': s.get('name', ''), 'interval_months': s.get('interval_months', 0), 'interval_miles': s.get('interval_miles', 0), 'parts_info': s.get('parts_info', ''), 'inspect_interval_months': int(s.get('inspect_interval_months', 0) or 0), 'inspect_interval_miles': int(s.get('inspect_interval_miles', 0) or 0), 'garage_parts': _scrub(s.get('garage_parts', [])), 'garage_torque': _scrub(s.get('garage_torque', []))} for s in v.get('services', [])],
         'torque_specs': [{'component': t.get('component', ''), 'torque': t.get('torque', ''), 'labels': t.get('labels', '')} for t in v.get('torque_specs', [])],
         'specs': {k: v.get('specs', {}).get(k, '') for k in ['engine_oil', 'oil_filter', 'tire_size', 'tire_pressure', 'wiper_blades', 'manual_url']},
     }
