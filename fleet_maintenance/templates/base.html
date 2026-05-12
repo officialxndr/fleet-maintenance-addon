@@ -723,6 +723,9 @@
         document.addEventListener('click', function (event) {
             const dropdown = document.getElementById('vehicleDropdown');
             if (dropdown && !dropdown.classList.contains('hidden') && !dropdown.contains(event.target) && !document.getElementById('vehicleDropdownBtn').contains(event.target)) dropdown.classList.add('hidden');
+            const bpDropdown = document.getElementById('blueprint-dropdown');
+            const bpWrapper  = document.getElementById('blueprint-dropdown-wrapper');
+            if (bpDropdown && !bpDropdown.classList.contains('hidden') && bpWrapper && !bpWrapper.contains(event.target)) bpDropdown.classList.add('hidden');
         });
 
         // =====================================================================
@@ -948,6 +951,17 @@
                 await new Promise(r => setTimeout(r, 600));
                 if (repoUrl) window.open(repoUrl, '_blank');
             }
+        }
+
+        async function refreshCommunityCache() {
+            const btn = document.getElementById('bp-refresh-btn');
+            if (btn) { btn.textContent = '⏳ Refreshing...'; btn.disabled = true; }
+            const ingress = '{{ ingress_path }}';
+            await fetch(`${ingress}/api/community_blueprints/refresh_cache`, { method: 'POST' }).catch(() => {});
+            const makeInput  = document.getElementById('new_make');
+            const modelInput = document.getElementById('new_model');
+            if (makeInput && modelInput) await _fetchMatchingBlueprints(makeInput.value.trim(), modelInput.value.trim());
+            if (btn) { btn.textContent = '🔄 Refresh'; btn.disabled = false; }
         }
 
         async function _loadLocalLibrary() {

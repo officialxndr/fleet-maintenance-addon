@@ -91,10 +91,56 @@
                 {% endif %}
             </div>
 
-            <div class="flex gap-2 mt-3 pt-3 border-t border-gray-200 dark:border-zinc-700 justify-end">
+            <div class="flex gap-2 mt-3 pt-3 border-t border-gray-200 dark:border-zinc-700 justify-end flex-wrap">
                 <button type="button" onclick="copyGuestLink('{{ vehicle_data.share_token }}')" class="text-[11px] font-bold text-accent bg-accent/10 hover:bg-accent/20 px-3 py-1.5 rounded transition inline-flex items-center gap-1">
                     🔗 Copy Link
                 </button>
+                <div class="relative admin-only" id="blueprint-dropdown-wrapper">
+                    <button type="button" onclick="document.getElementById('blueprint-dropdown').classList.toggle('hidden')" class="text-[11px] font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-900/30 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 border border-indigo-200 dark:border-indigo-800 px-3 py-1.5 rounded transition inline-flex items-center gap-1">
+                        📋 Blueprints ▾
+                    </button>
+                    <div id="blueprint-dropdown" class="hidden absolute right-0 top-full mt-1 w-72 bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 rounded-lg shadow-xl z-50 overflow-hidden">
+                        <div class="p-2 border-b border-gray-100 dark:border-zinc-800">
+                            <p class="text-[10px] font-bold text-gray-400 dark:text-zinc-500 uppercase tracking-wide px-1 mb-1">Share</p>
+                            <button type="button" onclick="publishToLocalLibrary('{{ current_vin }}'); document.getElementById('blueprint-dropdown').classList.add('hidden')" class="w-full text-left text-xs font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-zinc-800 px-3 py-2 rounded flex items-center gap-2 transition">
+                                📚 Save to Local Library
+                                <span class="ml-auto text-[10px] text-gray-400 dark:text-zinc-500 font-normal">This instance only</span>
+                            </button>
+                            <button type="button" id="contribute-btn-header" onclick="exportForCommunity(this, '{{ current_vin }}')" class="w-full text-left text-xs font-semibold text-green-700 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 px-3 py-2 rounded flex items-center gap-2 transition">
+                                🌐 Contribute to Community
+                                <span class="ml-auto text-[10px] text-gray-400 dark:text-zinc-500 font-normal">Submits for review</span>
+                            </button>
+                        </div>
+                        <div class="p-2 border-b border-gray-100 dark:border-zinc-800">
+                            <p class="text-[10px] font-bold text-gray-400 dark:text-zinc-500 uppercase tracking-wide px-1 mb-1">File</p>
+                            <a href="{{ ingress_path }}/api/{{ current_vin }}/export_blueprint" onclick="document.getElementById('blueprint-dropdown').classList.add('hidden')" class="w-full text-xs font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-zinc-800 px-3 py-2 rounded flex items-center gap-2 transition">
+                                📦 Export Blueprint
+                                <span class="ml-auto text-[10px] text-gray-400 dark:text-zinc-500 font-normal">Download JSON</span>
+                            </a>
+                            <button type="button" onclick="document.getElementById('blueprint-import-panel-header').classList.toggle('hidden')" class="w-full text-left text-xs font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-zinc-800 px-3 py-2 rounded flex items-center gap-2 transition">
+                                📂 Import Blueprint
+                                <span class="ml-auto text-[10px] text-gray-400 dark:text-zinc-500 font-normal">From file</span>
+                            </button>
+                        </div>
+                        <div id="blueprint-import-panel-header" class="hidden p-3 bg-gray-50 dark:bg-zinc-800/60 border-t border-gray-100 dark:border-zinc-800">
+                            <form action="{{ ingress_path }}/api/{{ current_vin }}/import_blueprint" method="POST" enctype="multipart/form-data" onsubmit="return confirm('Apply this blueprint to the current vehicle?');" class="flex flex-col gap-2">
+                                <input type="file" name="blueprint_file" accept=".json" required class="text-xs p-1 dark:text-gray-300 w-full">
+                                <div class="flex flex-col gap-1.5">
+                                    <label class="flex items-center gap-1.5 text-xs text-gray-600 dark:text-zinc-400 cursor-pointer">
+                                        <input type="checkbox" name="clear_services" value="yes" class="rounded border-gray-300 dark:border-zinc-600 text-accent focus:ring-accent">
+                                        Replace existing services
+                                    </label>
+                                    <label class="flex items-center gap-1.5 text-xs text-gray-600 dark:text-zinc-400 cursor-pointer">
+                                        <input type="checkbox" name="clear_torque" value="yes" class="rounded border-gray-300 dark:border-zinc-600 text-accent focus:ring-accent">
+                                        Replace existing torque specs
+                                    </label>
+                                </div>
+                                <p class="text-[10px] text-gray-400 dark:text-zinc-500">Specs always merge into existing glovebox fields.</p>
+                                <button type="submit" class="bg-accent text-white text-xs py-1.5 px-3 rounded font-bold transition self-start">Apply Blueprint</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
                 <button type="button" onclick="toggleVehicleSettings()" class="text-[11px] font-bold text-gray-700 dark:text-gray-200 bg-gray-200 dark:bg-zinc-700 hover:bg-gray-300 dark:hover:bg-zinc-600 px-3 py-1.5 rounded transition inline-flex items-center gap-1 admin-only" title="Edit Vehicle Settings">
                     ✏️ Edit Vehicle
                 </button>

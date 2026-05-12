@@ -57,7 +57,10 @@
         <div id="blueprint-match-section" class="hidden border border-blue-200 dark:border-blue-900/40 bg-blue-50 dark:bg-blue-900/10 rounded-lg p-4 mt-2">
             <div class="flex items-center justify-between mb-3">
                 <p class="text-sm font-bold text-blue-800 dark:text-blue-300">📋 Matching Blueprints Found</p>
-                <button type="button" onclick="clearBlueprintSelection()" class="text-xs text-blue-600 dark:text-blue-400 hover:underline">Clear selection</button>
+                <div class="flex items-center gap-3">
+                    <button type="button" id="bp-refresh-btn" onclick="refreshCommunityCache()" class="text-xs text-blue-600 dark:text-blue-400 hover:underline">🔄 Refresh</button>
+                    <button type="button" onclick="clearBlueprintSelection()" class="text-xs text-blue-600 dark:text-blue-400 hover:underline">Clear selection</button>
+                </div>
             </div>
             <div id="blueprint-match-list" class="space-y-2"></div>
             <p id="blueprint-match-empty" class="hidden text-xs text-blue-600 dark:text-blue-400 italic">No matching blueprints found. You can still add one to the library from an existing vehicle's Intervals tab.</p>
