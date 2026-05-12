@@ -47,14 +47,15 @@
                 <span class="text-[10px] text-gray-500 dark:text-zinc-400 font-bold uppercase tracking-wide ml-1">App Look & Feel</span>
                 <div class="flex flex-wrap items-center gap-3 bg-gray-50 dark:bg-zinc-800/80 p-2 rounded-lg border border-gray-200 dark:border-zinc-700 shadow-sm w-fit">
                     <div class="flex items-center gap-1.5 border-r border-gray-300 dark:border-zinc-600 pr-3">
-                        <span class="text-[10px] text-gray-500 dark:text-zinc-400 font-bold uppercase tracking-wide mr-1 hidden sm:inline">Accent:</span>
+                        <span class="text-[10px] text-gray-500 dark:text-zinc-400 font-bold uppercase tracking-wide mr-1 hidden sm:inline">Accent :</span>
                         <form action="{{ ingress_path }}/api/{{ current_vin }}/update_theme" method="POST"><input type="hidden" name="theme_color" value="#ef4444"><button type="submit" class="w-4 h-4 rounded-full bg-red-500 shadow hover:scale-110 transition"></button></form>
                         <form action="{{ ingress_path }}/api/{{ current_vin }}/update_theme" method="POST"><input type="hidden" name="theme_color" value="#f59e0b"><button type="submit" class="w-4 h-4 rounded-full bg-amber-500 shadow hover:scale-110 transition"></button></form>
                         <form action="{{ ingress_path }}/api/{{ current_vin }}/update_theme" method="POST"><input type="hidden" name="theme_color" value="#10b981"><button type="submit" class="w-4 h-4 rounded-full bg-emerald-500 shadow hover:scale-110 transition"></button></form>
                         <form action="{{ ingress_path }}/api/{{ current_vin }}/update_theme" method="POST"><input type="hidden" name="theme_color" value="#3b82f6"><button type="submit" class="w-4 h-4 rounded-full bg-blue-500 shadow hover:scale-110 transition"></button></form>
                         <form action="{{ ingress_path }}/api/{{ current_vin }}/update_theme" method="POST"><input type="hidden" name="theme_color" value="#8b5cf6"><button type="submit" class="w-4 h-4 rounded-full bg-violet-500 shadow hover:scale-110 transition"></button></form>
                         <form action="{{ ingress_path }}/api/{{ current_vin }}/update_theme" method="POST"><input type="hidden" name="theme_color" value="#52525b"><button type="submit" class="w-4 h-4 rounded-full bg-zinc-600 shadow hover:scale-110 transition"></button></form>
-                        <form action="{{ ingress_path }}/api/{{ current_vin }}/update_theme" method="POST" class="ml-1 flex items-center"><input type="color" name="theme_color" value="{{ vehicle_data.theme_color }}" onchange="this.form.submit()" class="h-5 w-5 p-0 border-0 rounded cursor-pointer bg-transparent hover:scale-110 transition"></form>
+                        <span class="text-[10px] text-gray-500 dark:text-zinc-400 font-bold uppercase tracking-wide mr-1 hidden sm:inline">Custom Color :</span>
+                        <form action="{{ ingress_path }}/api/{{ current_vin }}/update_theme" method="POST" class="ml-1 flex items-center"><input type="color" name="theme_color" value="{{ vehicle_data.theme_color }}" onchange="this.form.submit()" class="h-6 w-5 p-0 border-0 rounded cursor-pointer bg-transparent hover:scale-110 transition"></form>
                     </div>
                     <div class="flex items-center gap-1.5 border-r border-gray-300 dark:border-zinc-600 pr-3">
                         <span class="text-[10px] text-gray-500 dark:text-zinc-400 font-bold uppercase tracking-wide hidden sm:inline">Background:</span>
