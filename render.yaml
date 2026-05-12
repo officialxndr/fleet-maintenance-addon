@@ -2,9 +2,8 @@ services:
   - type: web
     name: fleet-maintenance-demo
     env: python
-    rootDir: fleet_maintenance
-    buildCommand: pip install -r requirements.txt
-    startCommand: python app.py
+    buildCommand: pip install -r fleet_maintenance/requirements.txt
+    startCommand: cd fleet_maintenance && python app.py
     envVars:
       - key: DEMO_MODE
         value: "true"
