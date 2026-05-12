@@ -499,12 +499,93 @@ async function deleteSpecsTorque(id) {
 
 function editSelectedTorque() {
     const selected = Array.from(document.querySelectorAll('.torque-checkbox:checked'));
-    selected.forEach(cb => {
-        const id = cb.dataset.id;
+    if (selected.length > 1) {
+        openTorqueBulkModal(selected.map(cb => cb.dataset.id));
+    } else if (selected.length === 1) {
+        const id = selected[0].dataset.id;
         const viewRow = document.getElementById('torque-row-' + id);
         if (viewRow && !viewRow.classList.contains('hidden')) openEditTorque(id);
+        clearSelection('torque');
+    }
+}
+
+function openTorqueBulkModal(ids) {
+    const toolbar = document.getElementById('torque-selection-toolbar');
+    document.getElementById('torque-bulk-modal').dataset.vin     = toolbar ? toolbar.dataset.vin     : '';
+    document.getElementById('torque-bulk-modal').dataset.ingress = toolbar ? toolbar.dataset.ingress : '';
+    document.getElementById('torque-bulk-modal').dataset.ids     = JSON.stringify(ids);
+    document.getElementById('torque-bulk-count').textContent =
+        'Edit ' + ids.length + ' Selected Torque Specs';
+    document.getElementById('torque-bulk-component').value = '';
+    document.getElementById('torque-bulk-torque').value    = '';
+    const chipEl = document.getElementById('torque-bulk-chip');
+    if (chipEl && !chipEl._chipWidget) createChipWidget(chipEl, '');
+    if (chipEl && chipEl._chipWidget) chipEl._chipWidget.setLabels('');
+    document.getElementById('torque-bulk-modal').classList.remove('hidden');
+    document.getElementById('torque-bulk-component').focus();
+}
+
+function closeTorqueBulkModal() {
+    document.getElementById('torque-bulk-modal').classList.add('hidden');
+}
+
+async function saveTorqueBulkEdit() {
+    const modal   = document.getElementById('torque-bulk-modal');
+    const vin     = modal.dataset.vin;
+    const ingress = modal.dataset.ingress;
+    const ids     = JSON.parse(modal.dataset.ids || '[]');
+    const updates = {};
+    const comp  = document.getElementById('torque-bulk-component').value.trim();
+    const torq  = document.getElementById('torque-bulk-torque').value.trim();
+    const chipEl = document.getElementById('torque-bulk-chip');
+    const labels = chipEl?._chipWidget?.getValue() || '';
+    if (comp)   updates.component = comp;
+    if (torq)   updates.torque    = torq;
+    if (labels) updates.labels    = labels;
+    if (!Object.keys(updates).length) { closeTorqueBulkModal(); clearSelection('torque'); return; }
+    const res  = await fetch(ingress + '/api/' + vin + '/batch_update_torque', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify({ ids, updates }),
     });
+    const data = await res.json();
+    closeTorqueBulkModal();
     clearSelection('torque');
+    if (data.status === 'success') {
+        ids.forEach(id => {
+            const viewRow = document.getElementById('torque-row-' + id);
+            if (!viewRow) return;
+            if (comp) {
+                const el = document.getElementById('torque-row-' + id + '-component');
+                if (el) el.textContent = comp;
+                viewRow.dataset.component = comp;
+            }
+            if (torq) {
+                const el = document.getElementById('torque-row-' + id + '-torque');
+                if (el) el.textContent = torq;
+                viewRow.dataset.torque = torq;
+            }
+            if (labels) {
+                viewRow.dataset.labels = labels;
+                const el = document.getElementById('torque-row-' + id + '-labels');
+                if (el) el.innerHTML = torqueLabelChipsHtml(labels);
+            }
+        });
+        try {
+            const gt = JSON.parse(document.getElementById('global-torque-data').textContent);
+            ids.forEach(id => {
+                const idx = gt.findIndex(t => t.id === id);
+                if (idx >= 0) {
+                    if (comp)   gt[idx].component = comp;
+                    if (torq)   gt[idx].torque    = torq;
+                    if (labels) gt[idx].labels    = labels;
+                }
+            });
+            document.getElementById('global-torque-data').textContent = JSON.stringify(gt);
+        } catch(e) {}
+    } else {
+        alert('Could not update selected specs.');
+    }
 }
 
 async function deleteSelectedTorque() {
@@ -614,3 +695,34 @@ async function saveInlineEditTorque(id) {
     }
 }
 </script>
+
+<!-- Torque Bulk Edit Modal -->
+<div id="torque-bulk-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" data-vin="" data-ingress="" data-ids="[]">
+    <div class="bg-white dark:bg-zinc-900 border dark:border-zinc-700 rounded-xl shadow-2xl w-full max-w-md">
+        <div class="p-6">
+            <h2 id="torque-bulk-count" class="text-lg font-bold text-gray-800 dark:text-gray-100 mb-1">Bulk Edit Torque Specs</h2>
+            <p class="text-xs text-gray-500 dark:text-zinc-400 mb-4">Leave a field blank to keep existing values. Filled fields apply to all selected specs.</p>
+            <div class="flex flex-col gap-3">
+                <div class="flex flex-col gap-1">
+                    <span class="text-[10px] text-gray-500 dark:text-zinc-400 font-bold uppercase tracking-wide">Component</span>
+                    <input id="torque-bulk-component" type="text" placeholder="Leave blank to keep existing"
+                        class="text-sm border dark:border-zinc-600 rounded p-2 w-full bg-white dark:bg-zinc-900 dark:text-white">
+                </div>
+                <div class="flex flex-col gap-1">
+                    <span class="text-[10px] text-gray-500 dark:text-zinc-400 font-bold uppercase tracking-wide">Torque Value</span>
+                    <input id="torque-bulk-torque" type="text" placeholder="Leave blank to keep existing"
+                        class="text-sm border dark:border-zinc-600 rounded p-2 w-full bg-white dark:bg-zinc-900 dark:text-white">
+                </div>
+                <div class="flex flex-col gap-1">
+                    <span class="text-[10px] text-gray-500 dark:text-zinc-400 font-bold uppercase tracking-wide">Labels</span>
+                    <div id="torque-bulk-chip" class="label-chip-widget"></div>
+                    <p class="text-[10px] text-gray-400 dark:text-zinc-500">Leave empty to keep existing labels</p>
+                </div>
+            </div>
+        </div>
+        <div class="flex gap-2 justify-end px-6 pb-5">
+            <button type="button" onclick="closeTorqueBulkModal()" class="bg-gray-200 dark:bg-zinc-700 text-gray-800 dark:text-gray-200 text-sm py-2 px-4 rounded-md font-bold hover:bg-gray-300 dark:hover:bg-zinc-600 transition">Cancel</button>
+            <button type="button" onclick="saveTorqueBulkEdit()" class="bg-accent text-white text-sm py-2 px-5 rounded-md font-bold shadow hover:opacity-90 transition">Apply to All</button>
+        </div>
+    </div>
+</div>

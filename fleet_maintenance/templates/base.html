@@ -475,12 +475,87 @@
 
         function editSelected(section) {
             const selected = Array.from(document.querySelectorAll('.' + section + '-checkbox:checked'));
-            selected.forEach(cb => {
-                const id = cb.dataset.id;
+            if (selected.length > 1) {
+                openBulkEditModal(section);
+            } else if (selected.length === 1) {
+                const id = selected[0].dataset.id;
                 const viewEl = document.getElementById('view-' + section + '-' + id);
                 if (viewEl && !viewEl.classList.contains('hidden')) toggleEdit(section, id);
+                clearSelection(section);
+            }
+        }
+
+        const _BULK_FIELDS = {
+            interval: [
+                { name: 'category',        label: 'Category',              type: 'text'   },
+                { name: 'name',            label: 'Service Name',          type: 'text'   },
+                { name: 'parts_info',      label: 'Required Parts / Notes',type: 'text'   },
+                { name: 'interval_months', label: 'Months',                type: 'number' },
+                { name: 'interval_miles',  label: 'Miles',                 type: 'number' },
+            ],
+            log: [
+                { name: 'date',        label: 'Date',        type: 'date'   },
+                { name: 'service',     label: 'Service',     type: 'text'   },
+                { name: 'mileage',     label: 'Mileage',     type: 'number' },
+                { name: 'cost_parts',  label: 'Parts Cost',  type: 'number' },
+                { name: 'cost_labor',  label: 'Labor Cost',  type: 'number' },
+                { name: 'notes',       label: 'Notes',       type: 'text'   },
+            ],
+        };
+        const _BULK_ENDPOINTS = { interval: 'batch_update_services', log: 'batch_update_logs' };
+        const _BULK_LABELS    = { interval: 'Intervals', log: 'Logbook Entries' };
+
+        let _bulkSection = null, _bulkIds = [], _bulkVin = '', _bulkIngress = '';
+
+        function openBulkEditModal(section) {
+            const selected = Array.from(document.querySelectorAll('.' + section + '-checkbox:checked'));
+            if (!selected.length) return;
+            _bulkIds     = selected.map(cb => cb.dataset.id);
+            _bulkSection = section;
+            const toolbar   = document.getElementById(section + '-selection-toolbar');
+            _bulkVin        = toolbar ? toolbar.dataset.vin    : '';
+            _bulkIngress    = toolbar ? toolbar.dataset.ingress : '';
+
+            const fields = _BULK_FIELDS[section] || [];
+            document.getElementById('bulk-edit-fields').innerHTML = fields.map(f => `
+                <div class="flex flex-col gap-1">
+                    <span class="text-[10px] text-gray-500 dark:text-zinc-400 font-bold uppercase tracking-wide">${f.label}</span>
+                    <input type="${f.type}" name="${f.name}" placeholder="Leave blank to keep existing"
+                        class="text-sm border dark:border-zinc-600 rounded p-2 w-full bg-white dark:bg-zinc-900 dark:text-white"
+                        ${f.type === 'number' ? 'min="0" step="any"' : ''}>
+                </div>
+            `).join('');
+            document.getElementById('bulk-edit-title').textContent =
+                'Edit ' + _bulkIds.length + ' Selected ' + (_BULK_LABELS[section] || section);
+            document.getElementById('bulk-edit-modal').classList.remove('hidden');
+            document.querySelector('#bulk-edit-fields input')?.focus();
+        }
+
+        function closeBulkEditModal() {
+            document.getElementById('bulk-edit-modal').classList.add('hidden');
+            _bulkSection = null; _bulkIds = [];
+        }
+
+        async function saveBulkEdit() {
+            const fields  = _BULK_FIELDS[_bulkSection] || [];
+            const updates = {};
+            fields.forEach(f => {
+                const el = document.querySelector('#bulk-edit-fields input[name="' + f.name + '"]');
+                if (el && el.value.trim() !== '')
+                    updates[f.name] = f.type === 'number' ? Number(el.value) : el.value.trim();
             });
-            clearSelection(section);
+            if (!Object.keys(updates).length) { closeBulkEditModal(); clearSelection(_bulkSection); return; }
+            const endpoint = _BULK_ENDPOINTS[_bulkSection];
+            const res  = await fetch(_bulkIngress + '/api/' + _bulkVin + '/' + endpoint, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                body: JSON.stringify({ ids: _bulkIds, updates }),
+            });
+            const data = await res.json();
+            closeBulkEditModal();
+            clearSelection(_bulkSection);
+            if (data.status === 'success') window.location.reload();
+            else alert('Could not update selected items.');
         }
 
         async function deleteSelected(section) {
@@ -639,6 +714,21 @@
     class="bg-gray-100 dark:bg-zinc-950 text-gray-800 dark:text-gray-200 p-4 font-sans transition-colors duration-200">
 
     {% block content %}{% endblock %}
+
+    <!-- Bulk Edit Modal (intervals + logbook) -->
+    <div id="bulk-edit-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+        <div class="bg-white dark:bg-zinc-900 border dark:border-zinc-700 rounded-xl shadow-2xl w-full max-w-lg">
+            <div class="p-6">
+                <h2 id="bulk-edit-title" class="text-lg font-bold text-gray-800 dark:text-gray-100 mb-1">Bulk Edit</h2>
+                <p class="text-xs text-gray-500 dark:text-zinc-400 mb-4">Leave a field blank to keep existing values. Filled fields apply to all selected items.</p>
+                <div id="bulk-edit-fields" class="flex flex-col gap-3"></div>
+            </div>
+            <div class="flex gap-2 justify-end px-6 pb-5">
+                <button type="button" onclick="closeBulkEditModal()" class="bg-gray-200 dark:bg-zinc-700 text-gray-800 dark:text-gray-200 text-sm py-2 px-4 rounded-md font-bold hover:bg-gray-300 dark:hover:bg-zinc-600 transition">Cancel</button>
+                <button type="button" onclick="saveBulkEdit()" class="bg-accent text-white text-sm py-2 px-5 rounded-md font-bold shadow hover:opacity-90 transition">Apply to All</button>
+            </div>
+        </div>
+    </div>
 
 </body>
 

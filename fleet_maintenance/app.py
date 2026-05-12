@@ -455,6 +455,59 @@ def batch_delete_logs(vin):
     save_db(db, sync_mqtt=False)
     return jsonify({"status": "success", "deleted": len(ids)})
 
+@app.route('/api/<vin>/batch_update_services', methods=['POST'])
+def batch_update_services(vin):
+    data = request.json or {}
+    ids = data.get('ids', [])
+    updates = data.get('updates', {})
+    if not ids or not updates:
+        return jsonify({"status": "error", "message": "No ids or updates"})
+    db = load_db()
+    for s in db["vehicles"][vin]["services"]:
+        if s["id"] in ids:
+            if 'category'        in updates: s['category']        = str(updates['category'])
+            if 'name'            in updates: s['name']            = str(updates['name'])
+            if 'parts_info'      in updates: s['parts_info']      = str(updates['parts_info'])
+            if 'interval_months' in updates: s['interval_months'] = int(updates['interval_months'])
+            if 'interval_miles'  in updates: s['interval_miles']  = int(updates['interval_miles'])
+    save_db(db)
+    return jsonify({"status": "success", "updated": len(ids)})
+
+@app.route('/api/<vin>/batch_update_logs', methods=['POST'])
+def batch_update_logs(vin):
+    data = request.json or {}
+    ids = data.get('ids', [])
+    updates = data.get('updates', {})
+    if not ids or not updates:
+        return jsonify({"status": "error", "message": "No ids or updates"})
+    db = load_db()
+    for log in db["vehicles"][vin]["logbook"]:
+        if log.get("id") in ids:
+            if 'date'        in updates: log['date']        = str(updates['date'])
+            if 'service'     in updates: log['service']     = str(updates['service'])
+            if 'mileage'     in updates: log['mileage']     = int(updates['mileage'])
+            if 'notes'       in updates: log['notes']       = str(updates['notes'])
+            if 'cost_parts'  in updates: log['cost_parts']  = float(updates['cost_parts'])
+            if 'cost_labor'  in updates: log['cost_labor']  = float(updates['cost_labor'])
+    save_db(db, sync_mqtt=False)
+    return jsonify({"status": "success", "updated": len(ids)})
+
+@app.route('/api/<vin>/batch_update_torque', methods=['POST'])
+def batch_update_torque(vin):
+    data = request.json or {}
+    ids = data.get('ids', [])
+    updates = data.get('updates', {})
+    if not ids or not updates:
+        return jsonify({"status": "error", "message": "No ids or updates"})
+    db = load_db()
+    for t in db["vehicles"][vin].get("torque_specs", []):
+        if t.get("id") in ids:
+            if 'component' in updates: t['component'] = str(updates['component'])
+            if 'torque'    in updates: t['torque']    = str(updates['torque'])
+            if 'labels'    in updates: t['labels']    = str(updates['labels'])
+    save_db(db, sync_mqtt=False)
+    return jsonify({"status": "success", "updated": len(ids)})
+
 @app.route('/api/<vin>/clear_logbook', methods=['POST'])
 def clear_logbook(vin):
     db = load_db()
