@@ -8,6 +8,27 @@ Fleet Maintenance goes far beyond a simple logbook. It combines predictive maint
 
 ---
 
+## What's New
+
+### 🌐 Community Blueprint Database
+The biggest addition yet. When adding a new vehicle, the app now searches a community-maintained GitHub repository for matching configurations. If someone has already built out a thorough maintenance schedule for your make and model — services, part numbers, torque specs, garage toolcard items — you can import all of it in one click, or hand-pick exactly which services you want. No manual data entry required for common vehicles.
+
+Contributing is just as easy. A **Contribute to Community** button in the Blueprints dropdown on the vehicle header strips all personal data and submits your config for review — no GitHub account needed. Submissions are moderated before going live.
+
+### 📋 Blueprints Header Button
+All blueprint actions — Save to Local Library, Contribute to Community, Export Blueprint, and Import Blueprint — are now consolidated into a single **📋 Blueprints** dropdown in the vehicle header, keeping the Intervals tab clean.
+
+### 📚 Local Blueprint Library
+Alongside the community database, blueprints can be saved to a private local library on your own instance. Useful when managing multiple vehicles of the same type — configure once, reuse across vehicles instantly without going through the community review process.
+
+### 🔍 Logbook Search & Sort
+The logbook now has a live search bar and a sort toggle (Newest First / Oldest First). Search matches against service name, notes, date, and mileage — results filter as you type.
+
+### ⚡ Live Summary Card Updates
+Logging a service on the Summary tab now instantly updates the card's status, colors, dates, and remaining mileage — no page refresh required.
+
+---
+
 ## Table of Contents
 
 - [Overview](#overview)
