@@ -8,6 +8,16 @@ Fleet Maintenance goes far beyond a simple logbook. It combines predictive maint
 
 ---
 
+## Live Demo
+
+**[fleet-maintenance-addon.onrender.com](https://fleet-maintenance-addon.onrender.com/)**
+
+Try the full app without installing anything. Two pre-configured vehicles are loaded with a mix of service statuses, logbook history, fuel logs, and torque specs so you can explore every feature. The demo resets automatically on each server restart.
+
+> Blueprint submission to the community database is disabled on the demo to prevent spam. Everything else works as it would on your own instance.
+
+---
+
 ## What's New
 
 ### 🌐 Community Blueprint Database
