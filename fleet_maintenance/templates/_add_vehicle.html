@@ -53,8 +53,35 @@
                 </div>
             </div>
         </div>
+        <!-- Blueprint matching section: shown when make+model are filled -->
+        <div id="blueprint-match-section" class="hidden border border-blue-200 dark:border-blue-900/40 bg-blue-50 dark:bg-blue-900/10 rounded-lg p-4 mt-2">
+            <div class="flex items-center justify-between mb-3">
+                <p class="text-sm font-bold text-blue-800 dark:text-blue-300">📋 Matching Blueprints Found</p>
+                <button type="button" onclick="clearBlueprintSelection()" class="text-xs text-blue-600 dark:text-blue-400 hover:underline">Clear selection</button>
+            </div>
+            <div id="blueprint-match-list" class="space-y-2"></div>
+            <p id="blueprint-match-empty" class="hidden text-xs text-blue-600 dark:text-blue-400 italic">No matching blueprints found. You can still add one to the library from an existing vehicle's Intervals tab.</p>
+        </div>
+
+        <!-- Hidden inputs populated by blueprint selection JS -->
+        <input type="hidden" name="blueprint_id" id="selected-blueprint-id" value="">
+        <input type="hidden" name="blueprint_source" id="selected-blueprint-source" value="">
+
         <button type="submit" class="w-full bg-accent text-white font-bold py-3 px-4 rounded-lg mt-6 shadow-md transition transform hover:-translate-y-0.5">Save Vehicle</button>
     </form>
+
+    <!-- Local Blueprint Library management -->
+    <div class="mt-10 pt-6 border-t border-gray-200 dark:border-zinc-800">
+        <div class="flex items-center justify-between mb-3">
+            <div>
+                <h3 class="text-lg font-bold text-gray-800 dark:text-white mb-1">Local Blueprint Library</h3>
+                <p class="text-xs text-gray-500 dark:text-zinc-400">Blueprints saved from vehicles on this instance. Use "Save to Local Library" on any vehicle's Intervals tab to add one.</p>
+            </div>
+        </div>
+        <div id="local-library-list" class="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-72 overflow-y-auto pr-1">
+            <p class="text-xs text-gray-400 dark:text-zinc-500 italic col-span-full" id="local-library-empty">Loading...</p>
+        </div>
+    </div>
 
     <div class="mt-10 pt-6 border-t border-gray-200 dark:border-zinc-800">
         <div class="flex flex-col md:flex-row justify-between items-start md:items-end mb-4 gap-4">

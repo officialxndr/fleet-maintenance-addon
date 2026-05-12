@@ -500,6 +500,8 @@
         document.addEventListener('DOMContentLoaded', () => {
             // Populate live services cache from rendered DOM
             _syncServiceCacheFromDOM();
+            _setupBlueprintMatching();
+            _loadLocalLibrary();
 
             try {
                 const savedTexture = localStorage.getItem('fleetBgTexture') || 'bg-pattern-solid';
@@ -722,6 +724,279 @@
             const dropdown = document.getElementById('vehicleDropdown');
             if (dropdown && !dropdown.classList.contains('hidden') && !dropdown.contains(event.target) && !document.getElementById('vehicleDropdownBtn').contains(event.target)) dropdown.classList.add('hidden');
         });
+
+        // =====================================================================
+        // Blueprint Library JS
+        // =====================================================================
+
+        let _blueprintDebounceTimer = null;
+        let _selectedBlueprintId = null;
+
+        function _setupBlueprintMatching() {
+            const makeInput  = document.getElementById('new_make');
+            const modelInput = document.getElementById('new_model');
+            if (!makeInput || !modelInput) return;
+            const handler = () => {
+                clearTimeout(_blueprintDebounceTimer);
+                _blueprintDebounceTimer = setTimeout(() => _fetchMatchingBlueprints(makeInput.value.trim(), modelInput.value.trim()), 400);
+            };
+            makeInput.addEventListener('input', handler);
+            modelInput.addEventListener('input', handler);
+        }
+
+        async function _fetchMatchingBlueprints(make, model) {
+            const section = document.getElementById('blueprint-match-section');
+            const list    = document.getElementById('blueprint-match-list');
+            const empty   = document.getElementById('blueprint-match-empty');
+            if (!section || !list) return;
+
+            if (make.length < 2 || model.length < 2) { section.classList.add('hidden'); return; }
+
+            const ingress = '{{ ingress_path }}';
+            const params  = `make=${encodeURIComponent(make)}&model=${encodeURIComponent(model)}`;
+
+            const [localRes, communityRes] = await Promise.allSettled([
+                fetch(`${ingress}/api/blueprint_library?${params}`).then(r => r.json()).then(data => data.map(d => ({...d, _src: 'local'}))),
+                fetch(`${ingress}/api/community_blueprints?${params}`).then(r => r.json()).then(data => data.map(d => ({...d, _src: 'community'}))),
+            ]);
+
+            const local     = localRes.status === 'fulfilled' ? localRes.value : [];
+            const community = communityRes.status === 'fulfilled' ? communityRes.value : [];
+            const all       = [...community, ...local];
+
+            list.innerHTML = '';
+            clearBlueprintSelection();
+
+            if (all.length === 0) {
+                empty.classList.remove('hidden');
+                section.classList.remove('hidden');
+                return;
+            }
+            empty.classList.add('hidden');
+            section.classList.remove('hidden');
+
+            all.forEach(bp => {
+                const badge = bp._src === 'community'
+                    ? `<span class="text-[10px] font-bold bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 border border-green-200 dark:border-green-800 px-1.5 py-0.5 rounded">🌐 Community</span>`
+                    : `<span class="text-[10px] font-bold bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 border border-blue-200 dark:border-blue-800 px-1.5 py-0.5 rounded">📚 Local</span>`;
+                const card = document.createElement('div');
+                card.className = 'bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-700 rounded-lg p-3 shadow-sm';
+                card.dataset.bpId  = bp.id;
+                card.dataset.bpSrc = bp._src;
+                card.innerHTML = `
+                    <div class="flex items-start justify-between gap-2 mb-2">
+                        <div>
+                            <p class="font-bold text-sm text-gray-800 dark:text-gray-100">${bp.label || `${bp.year} ${bp.make} ${bp.model}`}</p>
+                            <p class="text-xs text-gray-500 dark:text-zinc-400 mt-0.5">${bp.service_count || 0} services${bp.has_specs ? ' · specs' : ''}${bp.has_torque ? ' · torque' : ''}</p>
+                        </div>
+                        <div class="flex items-center gap-1.5 shrink-0">${badge}</div>
+                    </div>
+                    <div class="flex gap-2">
+                        <button type="button" onclick="_toggleBlueprintPreview(this, '${bp.id}', '${bp._src}')" class="text-xs bg-gray-100 dark:bg-zinc-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-zinc-700 py-1 px-2.5 rounded font-medium hover:bg-gray-200 dark:hover:bg-zinc-700 transition">Preview ▼</button>
+                        <button type="button" onclick="_selectBlueprint(this, '${bp.id}', '${bp._src}')" class="text-xs bg-accent text-white py-1 px-2.5 rounded font-bold hover:brightness-90 transition">Use Blueprint</button>
+                    </div>
+                    <div class="blueprint-preview hidden mt-3 border-t dark:border-zinc-700 pt-3 space-y-2 text-xs text-gray-600 dark:text-zinc-300">
+                        <p class="text-[10px] font-bold uppercase tracking-wide text-gray-400 dark:text-zinc-500">Loading...</p>
+                    </div>`;
+                list.appendChild(card);
+            });
+        }
+
+        async function _toggleBlueprintPreview(btn, bpId, src) {
+            const card    = btn.closest('[data-bp-id]');
+            const preview = card.querySelector('.blueprint-preview');
+            if (!preview.classList.contains('hidden')) {
+                preview.classList.add('hidden');
+                btn.textContent = 'Preview ▼';
+                return;
+            }
+            preview.classList.remove('hidden');
+            btn.textContent = 'Preview ▲';
+
+            if (preview.querySelector('[data-loaded]')) return;
+
+            const ingress = '{{ ingress_path }}';
+            const url     = src === 'local'
+                ? `${ingress}/api/blueprint_library/${bpId}/data`
+                : `${ingress}/api/community_blueprints/${bpId}`;
+            try {
+                const res  = await fetch(url);
+                const data = await res.json();
+                const bp   = src === 'local' ? (data.data || data) : data;
+                const services = bp.services || [];
+
+                preview.innerHTML = `
+                    <p class="text-[10px] font-bold uppercase tracking-wide text-gray-400 dark:text-zinc-500 mb-1">Select services to import:</p>
+                    <div class="space-y-1 max-h-48 overflow-y-auto" data-loaded="1">
+                        ${services.map(s => `
+                        <label class="flex items-center gap-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-zinc-800 rounded px-1 py-0.5">
+                            <input type="checkbox" class="blueprint-svc-checkbox rounded border-gray-300 dark:border-zinc-600 text-accent focus:ring-accent" data-name="${s.name}" checked>
+                            <span class="text-xs"><span class="font-medium">${s.name}</span> <span class="text-gray-400 dark:text-zinc-500">· ${s.interval_miles?.toLocaleString()} mi / ${s.interval_months} mo</span></span>
+                        </label>`).join('')}
+                    </div>
+                    <div class="flex flex-wrap gap-3 mt-2 pt-2 border-t dark:border-zinc-700">
+                        <label class="flex items-center gap-1.5 text-xs cursor-pointer"><input type="checkbox" class="blueprint-import-specs rounded text-accent" ${bp.specs && Object.values(bp.specs).some(Boolean) ? 'checked' : ''}> Import specs (oil, tires, wipers…)</label>
+                        <label class="flex items-center gap-1.5 text-xs cursor-pointer"><input type="checkbox" class="blueprint-import-torque rounded text-accent" ${(bp.torque_specs||[]).length ? 'checked' : ''}> Import torque specs</label>
+                    </div>`;
+            } catch(e) {
+                preview.innerHTML = `<p class="text-xs text-red-500">Failed to load preview.</p>`;
+            }
+        }
+
+        function _selectBlueprint(btn, bpId, src) {
+            const card = btn.closest('[data-bp-id]');
+            // Deselect any previously selected card
+            document.querySelectorAll('#blueprint-match-list [data-bp-id]').forEach(c => {
+                c.classList.remove('ring-2', 'ring-accent');
+                const useBtn = c.querySelector('button:last-of-type');
+                if (useBtn) useBtn.textContent = 'Use Blueprint';
+            });
+            card.classList.add('ring-2', 'ring-accent');
+            btn.textContent = '✓ Selected';
+            _selectedBlueprintId = bpId;
+
+            document.getElementById('selected-blueprint-id').value = bpId;
+            document.getElementById('selected-blueprint-source').value = src;
+
+            // Remove any previous selected_services hidden inputs
+            document.querySelectorAll('input[name="selected_services"]').forEach(el => el.remove());
+            document.querySelectorAll('input[name="import_specs"], input[name="import_torque"]').forEach(el => el.remove());
+
+            const preview = card.querySelector('.blueprint-preview');
+            const form    = document.querySelector('#add-vehicle form');
+            if (form && preview && preview.querySelector('[data-loaded]')) {
+                const checked = Array.from(preview.querySelectorAll('.blueprint-svc-checkbox:checked'));
+                checked.forEach(cb => {
+                    const inp = document.createElement('input');
+                    inp.type = 'hidden'; inp.name = 'selected_services'; inp.value = cb.dataset.name;
+                    form.appendChild(inp);
+                });
+                const specsChecked  = preview.querySelector('.blueprint-import-specs')?.checked;
+                const torqueChecked = preview.querySelector('.blueprint-import-torque')?.checked;
+                const si = document.createElement('input'); si.type='hidden'; si.name='import_specs';  si.value = specsChecked  ? 'yes' : 'no'; form.appendChild(si);
+                const ti = document.createElement('input'); ti.type='hidden'; ti.name='import_torque'; ti.value = torqueChecked ? 'yes' : 'no'; form.appendChild(ti);
+            }
+
+            // Disable CSV input when a blueprint is selected
+            const csvInput = document.querySelector('#add-vehicle input[name="csv_file"]');
+            if (csvInput) { csvInput.disabled = true; csvInput.closest('div')?.classList.add('opacity-50'); }
+
+            // Scroll to the submit button
+            document.querySelector('#add-vehicle button[type="submit"]')?.scrollIntoView({behavior:'smooth', block:'center'});
+        }
+
+        function clearBlueprintSelection() {
+            _selectedBlueprintId = null;
+            document.getElementById('selected-blueprint-id').value = '';
+            document.getElementById('selected-blueprint-source').value = '';
+            document.querySelectorAll('input[name="selected_services"], input[name="import_specs"], input[name="import_torque"]').forEach(el => el.remove());
+            const csvInput = document.querySelector('#add-vehicle input[name="csv_file"]');
+            if (csvInput) { csvInput.disabled = false; csvInput.closest('div')?.classList.remove('opacity-50'); }
+        }
+
+        async function publishToLocalLibrary(vin) {
+            const ingress = '{{ ingress_path }}';
+            const fd = new FormData(); fd.append('vin', vin);
+            try {
+                const res  = await fetch(`${ingress}/api/blueprint_library/publish`, {method:'POST', body:fd, headers:{Accept:'application/json'}});
+                const data = await res.json();
+                if (data.status === 'success') {
+                    alert(`✅ "${data.label}" saved to your local blueprint library.`);
+                    _loadLocalLibrary();
+                } else { alert('Failed to save blueprint.'); }
+            } catch(e) { alert('Error saving blueprint.'); }
+        }
+
+        async function exportForCommunity(btn, vin) {
+            const ingress = '{{ ingress_path }}';
+
+            // Check if the submit endpoint is configured
+            let submitEnabled = false;
+            let repoUrl = '';
+            try {
+                const meta = await fetch(`${ingress}/api/community_blueprints/repo_url`).then(r => r.json());
+                submitEnabled = meta.submit_enabled;
+                repoUrl = meta.url;
+            } catch(e) {}
+
+            if (submitEnabled) {
+                // One-click submit via Cloudflare Worker — no GitHub account needed
+                const orig = btn.textContent;
+                btn.disabled = true;
+                btn.textContent = '⏳ Submitting...';
+                try {
+                    const fd = new FormData(); fd.append('vin', vin);
+                    const res  = await fetch(`${ingress}/api/community_blueprints/contribute`, {method:'POST', body:fd, headers:{Accept:'application/json'}});
+                    const data = await res.json();
+                    if (data.status === 'submitted') {
+                        btn.textContent = '✓ Submitted!';
+                        setTimeout(() => { btn.textContent = orig; btn.disabled = false; }, 3000);
+                        if (data.issue_url && confirm(`✅ Blueprint submitted for review!\n\nYou can track its status here:\n${data.issue_url}\n\nOpen the review page?`)) {
+                            window.open(data.issue_url, '_blank');
+                        }
+                    } else {
+                        btn.textContent = orig; btn.disabled = false;
+                        alert(`Submission failed: ${data.message || 'Unknown error'}`);
+                    }
+                } catch(e) {
+                    btn.textContent = orig; btn.disabled = false;
+                    alert('Submission failed. Please check your connection and try again.');
+                }
+            } else {
+                // Worker not configured yet — fall back to file download + open repo
+                window.location.href = `${ingress}/api/${vin}/export_blueprint`;
+                await new Promise(r => setTimeout(r, 600));
+                if (repoUrl) window.open(repoUrl, '_blank');
+            }
+        }
+
+        async function _loadLocalLibrary() {
+            const container = document.getElementById('local-library-list');
+            const emptyMsg  = document.getElementById('local-library-empty');
+            if (!container) return;
+            const ingress = '{{ ingress_path }}';
+            try {
+                const library = await fetch(`${ingress}/api/blueprint_library`).then(r => r.json());
+                container.innerHTML = '';
+                if (!library.length) {
+                    emptyMsg.textContent = 'No blueprints in local library yet. Go to a vehicle\'s Intervals tab and click "Save to Local Library".';
+                    emptyMsg.classList.remove('hidden');
+                    return;
+                }
+                emptyMsg.classList.add('hidden');
+                library.forEach(bp => {
+                    const card = document.createElement('div');
+                    card.id = `lib-bp-${bp.id}`;
+                    card.className = 'flex justify-between items-center bg-white dark:bg-zinc-800 p-3 rounded-lg border border-gray-200 dark:border-zinc-700 shadow-sm';
+                    card.innerHTML = `
+                        <div class="overflow-hidden">
+                            <p class="text-sm font-bold text-gray-800 dark:text-gray-100 truncate">${bp.label || `${bp.year} ${bp.make} ${bp.model}`}</p>
+                            <p class="text-xs text-accent mt-0.5 font-medium">${bp.service_count || 0} services${bp.has_specs ? ' · specs' : ''}${bp.has_torque ? ' · torque' : ''}</p>
+                            <p class="text-[10px] text-gray-400 dark:text-zinc-500">${(bp.published_at||'').slice(0,10)}</p>
+                        </div>
+                        <button type="button" onclick="_deleteLocalBlueprint('${bp.id}')" class="text-red-500 hover:text-red-700 bg-red-50 dark:bg-red-900/20 p-2 rounded-md transition ml-2 shrink-0" title="Remove from library">🗑️</button>`;
+                    container.appendChild(card);
+                });
+            } catch(e) {
+                if (emptyMsg) { emptyMsg.textContent = 'Could not load library.'; emptyMsg.classList.remove('hidden'); }
+            }
+        }
+
+        async function _deleteLocalBlueprint(bpId) {
+            if (!confirm('Remove this blueprint from the local library?')) return;
+            const ingress = '{{ ingress_path }}';
+            await fetch(`${ingress}/api/blueprint_library/${bpId}`, {method:'DELETE'});
+            document.getElementById(`lib-bp-${bpId}`)?.remove();
+            const container = document.getElementById('local-library-list');
+            if (container && !container.children.length) {
+                const empty = document.getElementById('local-library-empty');
+                if (empty) { empty.textContent = 'No blueprints in local library yet.'; empty.classList.remove('hidden'); }
+            }
+        }
+
+        // =====================================================================
+        // End Blueprint Library JS
+        // =====================================================================
 
         function filterAndSortSummary() {
             const searchText = document.getElementById('search-service').value.toLowerCase();

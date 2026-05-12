@@ -7,6 +7,7 @@ import requests
 from datetime import datetime
 from io import StringIO
 from core import load_db, save_db, calculate_status, calculate_fuel_stats, calculate_adm, get_ha_sensors, parse_date, mqtt_client
+import community_blueprints as cbp
 
 app = Flask(__name__, static_folder='static')
 
@@ -165,15 +166,62 @@ def add_vehicle():
     except ValueError:
         mileage = 0
 
+    blueprint_id = request.form.get('blueprint_id', '').strip()
+    blueprint_source = request.form.get('blueprint_source', '')  # 'local' or 'community'
+    selected_services = request.form.getlist('selected_services')  # empty = import all
+    import_specs = request.form.get('import_specs') == 'yes'
+    import_torque = request.form.get('import_torque') == 'yes'
+
     new_services_config = []
-    if 'csv_file' in request.files and request.files['csv_file'].filename != '':
-        for row in csv.DictReader(StringIO(request.files['csv_file'].stream.read().decode("UTF8"), newline=None)):
-            new_services_config.append({"id": str(uuid.uuid4())[:8], "category": row.get('Category', 'Other').strip(), "name": row.get('Service', 'Unknown').strip(), "interval_months": int(row.get('Interval_Months', 0)), "interval_miles": int(row.get('Interval_Miles', 0)), "parts_info": row.get('Parts_Info', '').strip()})
-    else:
-        new_services_config = [dict(s, id=str(uuid.uuid4())[:8]) for s in db.get("default_services", [])]
+    initial_specs = {"battery_date": ""}
+    initial_torque = []
+
+    if blueprint_id:
+        bp_data = None
+        if blueprint_source == 'local':
+            entry = cbp.get_local_blueprint(blueprint_id)
+            bp_data = entry.get('data') if entry else None
+        else:
+            bp_data = cbp.fetch_community_blueprint(blueprint_id)
+
+        if bp_data:
+            for s in bp_data.get('services', []):
+                if selected_services and s.get('name', '') not in selected_services:
+                    continue
+                new_services_config.append({
+                    "id": str(uuid.uuid4())[:8],
+                    "category": str(s.get("category", "Other")).strip() or "Other",
+                    "name": str(s.get("name", "")).strip(),
+                    "interval_months": int(s.get("interval_months", 0)),
+                    "interval_miles": int(s.get("interval_miles", 0)),
+                    "parts_info": str(s.get("parts_info", "")).strip(),
+                    "last_service_miles": None,
+                    "last_service_date": None,
+                    "garage_parts": [{"id": str(uuid.uuid4())[:8], "name": str(p.get("name", "")), "value": str(p.get("value", ""))} for p in (s.get("garage_parts") or [])],
+                    "garage_torque": [{"id": str(uuid.uuid4())[:8], "name": str(t.get("name", "")), "value": str(t.get("value", ""))} for t in (s.get("garage_torque") or [])],
+                })
+            if import_specs and isinstance(bp_data.get('specs'), dict):
+                for key in ("engine_oil", "oil_filter", "tire_size", "tire_pressure", "wiper_blades", "manual_url"):
+                    if bp_data['specs'].get(key):
+                        initial_specs[key] = str(bp_data['specs'][key]).strip()
+            if import_torque:
+                for t in bp_data.get('torque_specs', []):
+                    initial_torque.append({"id": str(uuid.uuid4())[:8], "component": str(t.get("component", "")).strip(), "torque": str(t.get("torque", "")).strip(), "labels": str(t.get("labels", "")).strip()})
+
+    if not new_services_config and not blueprint_id:
+        if 'csv_file' in request.files and request.files['csv_file'].filename != '':
+            for row in csv.DictReader(StringIO(request.files['csv_file'].stream.read().decode("UTF8"), newline=None)):
+                new_services_config.append({"id": str(uuid.uuid4())[:8], "category": row.get('Category', 'Other').strip(), "name": row.get('Service', 'Unknown').strip(), "interval_months": int(row.get('Interval_Months', 0)), "interval_miles": int(row.get('Interval_Miles', 0)), "parts_info": row.get('Parts_Info', '').strip()})
+        else:
+            new_services_config = [dict(s, id=str(uuid.uuid4())[:8]) for s in db.get("default_services", [])]
 
     if request.form.get('update_baseline') == 'yes' and new_services_config:
         db["default_services"] = [{"id": str(uuid.uuid4())[:8], "category": s["category"], "name": s["name"], "interval_months": s["interval_months"], "interval_miles": s["interval_miles"], "parts_info": s.get("parts_info", "")} for s in new_services_config]
+
+    if blueprint_id:
+        svc_list = new_services_config  # already has garage_parts/torque from blueprint
+    else:
+        svc_list = [dict(s, last_service_miles=None, last_service_date=None, garage_parts=[], garage_torque=[]) for s in new_services_config]
 
     db.setdefault("vehicles", {})[vin] = {
         "nickname": request.form.get('nickname', '').strip(),
@@ -184,11 +232,11 @@ def add_vehicle():
         "theme_color": "#2563eb",
         "ha_entity_id": request.form.get('ha_entity_id', '').strip(),
         "image_url": request.form.get('image_url', '').strip(),
-        "services": [dict(s, last_service_miles=None, last_service_date=None, garage_parts=[], garage_torque=[]) for s in new_services_config],
+        "services": svc_list,
         "logbook": [],
-        "specs": {"battery_date": ""},
+        "specs": initial_specs,
         "fuel_logs": [],
-        "torque_specs": [],
+        "torque_specs": initial_torque,
         "share_token": str(uuid.uuid4()),
     }
     save_db(db)
@@ -775,6 +823,104 @@ def export_logbook(vin):
             f"{float(log.get('cost_labor', 0)):.2f}"
         ])
     return Response(si.getvalue(), mimetype="text/csv", headers={"Content-Disposition": f"attachment;filename=logbook_{vin}.csv"})
+
+# ==========================================
+# 📚 LOCAL BLUEPRINT LIBRARY
+# ==========================================
+
+@app.route('/api/blueprint_library')
+def get_blueprint_library():
+    make = request.args.get('make', '')
+    model = request.args.get('model', '')
+    results = cbp.search_local_library(make, model)
+    return jsonify(results)
+
+@app.route('/api/blueprint_library/publish', methods=['POST'])
+def publish_blueprint():
+    db = load_db()
+    vin = request.form.get('vin', '')
+    if vin not in db.get('vehicles', {}):
+        return jsonify({'status': 'error', 'message': 'Vehicle not found'}), 404
+    v = db['vehicles'][vin]
+
+    def _scrub(items):
+        return [{'name': i.get('name', ''), 'value': i.get('value', '')} for i in (items or [])]
+
+    blueprint = {
+        'blueprint_version': 1,
+        'exported_at': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ'),
+        'year': v.get('year', ''),
+        'make': v.get('make', ''),
+        'model': v.get('model', ''),
+        'services': [{'category': s.get('category', 'Other'), 'name': s.get('name', ''), 'interval_months': s.get('interval_months', 0), 'interval_miles': s.get('interval_miles', 0), 'parts_info': s.get('parts_info', ''), 'garage_parts': _scrub(s.get('garage_parts', [])), 'garage_torque': _scrub(s.get('garage_torque', []))} for s in v.get('services', [])],
+        'torque_specs': [{'component': t.get('component', ''), 'torque': t.get('torque', ''), 'labels': t.get('labels', '')} for t in v.get('torque_specs', [])],
+        'specs': {k: v.get('specs', {}).get(k, '') for k in ['engine_oil', 'oil_filter', 'tire_size', 'tire_pressure', 'wiper_blades', 'manual_url']},
+    }
+    entry = cbp.publish_to_local_library(blueprint, vin_label=vin)
+    return jsonify({'status': 'success', 'id': entry['id'], 'label': entry['label']})
+
+@app.route('/api/blueprint_library/<bp_id>', methods=['DELETE'])
+def delete_blueprint(bp_id):
+    deleted = cbp.delete_from_local_library(bp_id)
+    return jsonify({'status': 'success' if deleted else 'not_found'})
+
+@app.route('/api/blueprint_library/<bp_id>/data')
+def get_local_blueprint_data(bp_id):
+    entry = cbp.get_local_blueprint(bp_id)
+    if not entry:
+        return jsonify({'error': 'not found'}), 404
+    return jsonify(entry)
+
+
+# ==========================================
+# 🌐 COMMUNITY BLUEPRINT DATABASE
+# ==========================================
+
+@app.route('/api/community_blueprints')
+def get_community_blueprints():
+    make = request.args.get('make', '')
+    model = request.args.get('model', '')
+    try:
+        results = cbp.fetch_community_index(make, model)
+    except Exception:
+        results = []
+    return jsonify(results)
+
+@app.route('/api/community_blueprints/<bp_id>')
+def get_community_blueprint(bp_id):
+    data = cbp.fetch_community_blueprint(bp_id)
+    if not data:
+        return jsonify({'error': 'not found'}), 404
+    return jsonify(data)
+
+@app.route('/api/community_blueprints/repo_url')
+def community_repo_url():
+    return jsonify({'url': cbp.get_repo_url(), 'submit_enabled': bool(cbp.COMMUNITY_SUBMIT_URL)})
+
+@app.route('/api/community_blueprints/contribute', methods=['POST'])
+def contribute_blueprint():
+    db = load_db()
+    vin = request.form.get('vin', '')
+    if vin not in db.get('vehicles', {}):
+        return jsonify({'status': 'error', 'message': 'Vehicle not found'}), 404
+    v = db['vehicles'][vin]
+
+    def _scrub(items):
+        return [{'name': i.get('name', ''), 'value': i.get('value', '')} for i in (items or [])]
+
+    blueprint = {
+        'blueprint_version': 1,
+        'exported_at': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ'),
+        'year': v.get('year', ''),
+        'make': v.get('make', ''),
+        'model': v.get('model', ''),
+        'services': [{'category': s.get('category', 'Other'), 'name': s.get('name', ''), 'interval_months': s.get('interval_months', 0), 'interval_miles': s.get('interval_miles', 0), 'parts_info': s.get('parts_info', ''), 'garage_parts': _scrub(s.get('garage_parts', [])), 'garage_torque': _scrub(s.get('garage_torque', []))} for s in v.get('services', [])],
+        'torque_specs': [{'component': t.get('component', ''), 'torque': t.get('torque', ''), 'labels': t.get('labels', '')} for t in v.get('torque_specs', [])],
+        'specs': {k: v.get('specs', {}).get(k, '') for k in ['engine_oil', 'oil_filter', 'tire_size', 'tire_pressure', 'wiper_blades', 'manual_url']},
+    }
+    result = cbp.submit_blueprint(blueprint)
+    return jsonify(result)
+
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
