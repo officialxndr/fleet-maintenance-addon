@@ -6,7 +6,7 @@ import uuid
 import requests
 from datetime import datetime
 from io import StringIO
-from core import load_db, save_db, calculate_status, calculate_fuel_stats, calculate_adm, get_ha_sensors, parse_date, mqtt_client
+from core import load_db, save_db, calculate_status, calculate_fuel_stats, calculate_adm, get_ha_sensors, search_ha_entities, parse_date, mqtt_client
 import community_blueprints as cbp
 
 app = Flask(__name__, static_folder='static')
@@ -130,6 +130,14 @@ def export_db():
 
 @app.route('/api/<vin>/live_data')
 def live_data(vin): return jsonify({"current_mileage": load_db().get("vehicles", {}).get(vin, {}).get("current_mileage", 0)})
+
+@app.route('/api/ha_entities')
+def ha_entities():
+    q = request.args.get('q', '').strip()
+    results, error = search_ha_entities(q)
+    if error == "connection_failed":
+        return jsonify({"error": error}), 503
+    return jsonify(results)
 
 @app.route('/api/decode_vin/<vin>')
 def decode_vin(vin):

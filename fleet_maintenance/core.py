@@ -989,6 +989,30 @@ def get_ha_sensors():
         return []
 
 
+def search_ha_entities(q=""):
+    """Live entity search. Returns (results, error) — error is None on success."""
+    if not HA_TOKEN or HA_TOKEN == "PASTE_YOUR_LONG_LIVED_ACCESS_TOKEN_HERE":
+        return [], "no_token"
+    try:
+        resp = requests.get(
+            f"{HA_URL}/api/states",
+            headers={"Authorization": f"Bearer {HA_TOKEN}", "Content-Type": "application/json"},
+            timeout=3,
+        )
+        resp.raise_for_status()
+        sensors = [
+            {"id": s["entity_id"], "name": s["attributes"].get("friendly_name", s["entity_id"])}
+            for s in resp.json()
+            if s["entity_id"].startswith(("sensor.", "input_number.", "weather."))
+        ]
+        if q:
+            ql = q.lower()
+            sensors = [s for s in sensors if ql in s["id"].lower() or ql in s["name"].lower()]
+        return sensors[:50], None
+    except Exception:
+        return [], "connection_failed"
+
+
 # Migrate legacy JSON now that save_db is defined. Done at module import time
 # so the first request after upgrade Just Works.
 _migrate_from_json()

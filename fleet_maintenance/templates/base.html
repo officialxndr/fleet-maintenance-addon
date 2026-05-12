@@ -1175,6 +1175,107 @@
                 textArea.remove();
             }
         }
+
+    function initEntityAutocomplete(input) {
+        let _dd = null, _timer = null, _activeIdx = -1;
+        const INGRESS = '{{ ingress_path }}';
+
+        function _pos() {
+            if (!_dd) return;
+            const r = input.getBoundingClientRect();
+            _dd.style.top = (r.bottom + 2) + 'px';
+            _dd.style.left = r.left + 'px';
+            _dd.style.width = r.width + 'px';
+        }
+
+        function _show(items, status) {
+            if (!_dd) {
+                _dd = document.createElement('div');
+                _dd.style.position = 'fixed';
+                _dd.style.zIndex = '9999';
+                _dd.style.maxHeight = '200px';
+                _dd.style.overflowY = 'auto';
+                _dd.className = 'bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-lg shadow-xl text-sm';
+                document.body.appendChild(_dd);
+            }
+            _activeIdx = -1;
+            if (status === 'loading') {
+                _dd.innerHTML = '<div class="px-3 py-2 text-gray-400 dark:text-zinc-500 text-xs italic">Searching Home Assistant...</div>';
+            } else if (status === 'error') {
+                _dd.innerHTML = '<div class="px-3 py-2 text-red-500 dark:text-red-400 text-xs">⚠️ Could not reach Home Assistant</div>';
+            } else if (status === 'empty') {
+                _dd.innerHTML = '<div class="px-3 py-2 text-gray-400 dark:text-zinc-500 text-xs italic">No matching entities found</div>';
+            } else {
+                _dd.innerHTML = '';
+                items.forEach((item, i) => {
+                    const el = document.createElement('div');
+                    el.dataset.acIdx = i;
+                    el.className = 'px-3 py-1.5 cursor-pointer border-b border-gray-100 dark:border-zinc-700/40 last:border-0 hover:bg-blue-50 dark:hover:bg-zinc-700 transition-colors';
+                    el.innerHTML = '<div class="font-mono text-xs text-blue-600 dark:text-blue-400 leading-tight">' + item.id + '</div>' +
+                        (item.name !== item.id ? '<div class="text-[10px] text-gray-400 dark:text-zinc-500 leading-tight">' + item.name + '</div>' : '');
+                    el.addEventListener('mousedown', function(e) {
+                        e.preventDefault();
+                        input.value = item.id;
+                        _close();
+                    });
+                    _dd.appendChild(el);
+                });
+            }
+            _pos();
+        }
+
+        function _close() {
+            if (_dd) { _dd.remove(); _dd = null; }
+            _activeIdx = -1;
+        }
+
+        function _setActive(idx) {
+            if (!_dd) return;
+            const els = _dd.querySelectorAll('[data-ac-idx]');
+            els.forEach(function(el) { el.classList.remove('bg-blue-50', 'dark:bg-zinc-700'); });
+            _activeIdx = Math.max(0, Math.min(idx, els.length - 1));
+            if (els[_activeIdx]) {
+                els[_activeIdx].classList.add('bg-blue-50', 'dark:bg-zinc-700');
+                els[_activeIdx].scrollIntoView({ block: 'nearest' });
+            }
+        }
+
+        input.addEventListener('input', function() {
+            clearTimeout(_timer);
+            const q = input.value.trim();
+            if (!q) { _close(); return; }
+            _show([], 'loading');
+            _timer = setTimeout(async function() {
+                try {
+                    const res = await fetch(INGRESS + '/api/ha_entities?q=' + encodeURIComponent(q));
+                    if (!res.ok) { _show([], 'error'); return; }
+                    const data = await res.json();
+                    if (!Array.isArray(data)) { _show([], 'error'); return; }
+                    _show(data, data.length ? 'ok' : 'empty');
+                } catch(e) { _show([], 'error'); }
+            }, 250);
+        });
+
+        input.addEventListener('keydown', function(e) {
+            if (!_dd) return;
+            const els = _dd.querySelectorAll('[data-ac-idx]');
+            if (e.key === 'ArrowDown') { e.preventDefault(); _setActive(_activeIdx + 1); }
+            else if (e.key === 'ArrowUp') { e.preventDefault(); _setActive(_activeIdx - 1); }
+            else if (e.key === 'Enter' && _activeIdx >= 0 && els[_activeIdx]) {
+                e.preventDefault();
+                const mono = els[_activeIdx].querySelector('.font-mono');
+                if (mono) { input.value = mono.textContent; _close(); }
+            } else if (e.key === 'Escape') { _close(); }
+        });
+
+        input.addEventListener('blur', function() { setTimeout(_close, 150); });
+        window.addEventListener('scroll', _pos, true);
+        window.addEventListener('resize', _pos);
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('[data-entity-ac]').forEach(initEntityAutocomplete);
+    });
     </script>
 </head>
 
