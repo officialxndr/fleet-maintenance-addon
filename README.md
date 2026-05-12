@@ -25,6 +25,7 @@ Fleet Maintenance goes far beyond a simple logbook. It combines predictive maint
   - [MQTT Discovery](#mqtt-discovery)
   - [Global Settings & Personalization](#global-settings--personalization)
   - [Database Tools](#database-tools)
+  - [Community Blueprints](#community-blueprints)
 - [Installation: Option A — Home Assistant Add-on](#installation-option-a--home-assistant-add-on)
 - [Installation: Option B — Standalone Docker](#installation-option-b--standalone-docker)
 - [Environment Variable Reference](#environment-variable-reference)
@@ -282,6 +283,58 @@ Per-vehicle customization:
 
 ---
 
+### Community Blueprints
+
+Community Blueprints is a GitHub-backed library of community-contributed vehicle configurations. Instead of manually entering every service interval, part number, and torque spec when adding a new car, you can instantly import a verified configuration that another user has already built for the same make and model.
+
+#### How it works
+
+When you go to add a new vehicle and fill in the **Make** and **Model** fields, the app automatically searches both a local library and the community GitHub repository for matching blueprints. If any are found, a **Matching Blueprints** panel appears below the form showing each result as a card.
+
+Each card displays:
+- Vehicle label (Year / Make / Model)
+- Number of services included
+- Whether specs and torque data are included
+- A **Community** or **Local** badge
+
+Clicking **Preview** on any card expands an inline checklist of every service in that blueprint. All services are checked by default — uncheck any you don't want. Two additional checkboxes let you choose whether to also import the vehicle's **specs** (oil type, tire size, wiper blades, etc.) and **torque specs**.
+
+Clicking **Use Blueprint** wires up the selection to the form. When you submit, the new vehicle is created with exactly the services and data you chose — no page reloads, no manual CSV work.
+
+#### Contributing a blueprint
+
+If you've built out a thorough configuration for your vehicle — services, garage parts, torque specs, reference specs — you can share it with the community directly from the app.
+
+1. Open the vehicle's **Intervals** tab
+2. Click **🌐 Contribute to Community**
+3. The app strips all personal data (mileage history, logbook, VIN, nickname) and submits the configuration anonymously to the community repository for review
+
+No GitHub account required. Submissions are reviewed by the maintainer before going live.
+
+#### Local Library
+
+The **📚 Save to Local Library** button (also in the Intervals tab) saves a blueprint to a private local library on your own instance. This is useful if you manage multiple vehicles of the same type — add the config once, reuse it across vehicles without going through the community review process.
+
+Local blueprints are visible only on your instance and appear alongside community results in the matching panel when adding a vehicle. They can be deleted from the local library section at the bottom of the Add Vehicle page.
+
+#### Blueprint data included
+
+| Data | Included |
+|---|---|
+| Service intervals (name, category, months, miles) | ✅ |
+| Garage parts per service | ✅ |
+| Garage torque specs per service | ✅ |
+| Vehicle-wide torque specs | ✅ |
+| Reference specs (oil, tires, wipers, manual URL) | ✅ |
+| Mileage history / logbook | ❌ Stripped |
+| VIN / nickname / personal identifiers | ❌ Stripped |
+
+#### Coming improvements
+
+- **Per-blueprint notes** — When multiple blueprints exist for the same make/model (e.g., different trims or engine variants), a short note field will allow contributors and maintainers to distinguish them (e.g., *"1.5T Sport trim"* vs *"2.0 base"*). The command `/approve note: 1.5T Sport trim` will be added to the review workflow to set this label at approval time, so users can make an informed choice between options.
+
+---
+
 ### Database Tools
 
 **Export Database:** Download a full JSON backup of all vehicles, services, logs, fuel entries, specs, and settings at any time via the export endpoint.
@@ -440,10 +493,6 @@ Your database is stored at `./fleet_data/fleet_database.json` on the host. This 
 All environment variables are optional. The app will start and function fully without any of them — HA sync and MQTT publishing simply won't run.
 
 ---
-
-## Coming Soon
-
-**Community Blueprints** — A global GitHub-backed repository of vehicle-specific configurations. Browse by Make, Model, and Year to instantly import community-verified maintenance intervals, part numbers, and torque specs directly into your app — no manual data entry required for common vehicles.
 
 ---
 

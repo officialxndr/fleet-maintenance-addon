@@ -15,7 +15,7 @@ _RAW_BASE     = f"https://raw.githubusercontent.com/{_GITHUB_OWNER}/{_GITHUB_REP
 COMMUNITY_INDEX_URL  = f"{_RAW_BASE}/index.json"
 COMMUNITY_BASE_URL   = f"{_RAW_BASE}/"
 COMMUNITY_REPO_URL   = f"https://github.com/{_GITHUB_OWNER}/{_GITHUB_REPO}"
-COMMUNITY_SUBMIT_URL = "curly-math-736f.zander-halverson99.workers.dev"  # Set to your Cloudflare Worker URL after deployment
+COMMUNITY_SUBMIT_URL = "https://curly-math-736f.zander-halverson99.workers.dev"  # Set to your Cloudflare Worker URL after deployment
 
 CACHE_TTL_SECONDS = 86400  # 24 hours
 
