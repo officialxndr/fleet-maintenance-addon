@@ -1,6 +1,6 @@
 name: "Fleet Maintenance Server"
 description: "A standalone vehicle maintenance logbook."
-version: "2.0.3"
+version: "2.0.4"
 slug: "fleet_maintenance"
 init: false
 arch:

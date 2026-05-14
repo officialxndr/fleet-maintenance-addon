@@ -25,15 +25,36 @@
         </div>
     </div>
 
+    {# ── Add Custom Service ── #}
     <div class="bg-gray-50 dark:bg-zinc-800/50 p-4 rounded-lg border dark:border-zinc-800 mb-5 shadow-sm admin-only">
         <p class="text-xs font-bold text-gray-500 dark:text-zinc-400 uppercase mb-3 tracking-wide">+ Add Custom Service</p>
-        <form action="{{ ingress_path }}/api/{{ current_vin }}/add_service" method="POST" class="flex flex-col md:flex-row flex-wrap gap-3 items-center">
-            <div class="flex flex-col gap-1 flex-1 min-w-[120px] w-full md:w-auto"><span class="text-[10px] text-gray-500 dark:text-zinc-400 font-bold uppercase tracking-wide">Category</span><input type="text" name="category" placeholder="e.g. Engine" required class="text-sm border dark:border-zinc-700 rounded p-2 w-full bg-white dark:bg-zinc-900 dark:text-white focus-ring-accent"></div>
-            <div class="flex flex-col gap-1 flex-1 min-w-[150px] w-full md:w-auto"><span class="text-[10px] text-gray-500 dark:text-zinc-400 font-bold uppercase tracking-wide">Service Name</span><input type="text" name="name" placeholder="e.g. Timing Belt" required class="text-sm border dark:border-zinc-700 rounded p-2 w-full bg-white dark:bg-zinc-900 dark:text-white focus-ring-accent"></div>
-            <div class="flex flex-col gap-1 flex-1 min-w-[150px] w-full md:w-auto"><span class="text-[10px] text-gray-500 dark:text-zinc-400 font-bold uppercase tracking-wide">Required Parts / Notes</span><input type="text" name="parts_info" placeholder="e.g. 5.5Qts 5W-30" class="text-sm border dark:border-zinc-700 rounded p-2 w-full bg-white dark:bg-zinc-900 dark:text-white focus-ring-accent"></div>
-            <div class="flex flex-col gap-1 w-full md:w-32"><span class="text-[10px] text-gray-500 dark:text-zinc-400 font-bold uppercase tracking-wide">Months</span><div class="flex items-center gap-1.5 w-full"><input type="number" name="interval_months" required class="text-sm border dark:border-zinc-700 rounded p-2 w-full text-center bg-white dark:bg-zinc-900 dark:text-white focus-ring-accent"><span class="text-xs text-gray-500 dark:text-zinc-400 font-medium">mo</span></div></div>
-            <div class="flex flex-col gap-1 w-full md:w-32"><span class="text-[10px] text-gray-500 dark:text-zinc-400 font-bold uppercase tracking-wide">{{ 'Kilometers' if global_settings.unit == 'km' else 'Miles' }}</span><div class="flex items-center gap-1.5 w-full"><input type="number" name="interval_miles" required class="text-sm border dark:border-zinc-700 rounded p-2 w-full text-center bg-white dark:bg-zinc-900 dark:text-white focus-ring-accent"><span class="text-xs text-gray-500 dark:text-zinc-400 font-medium">{{ global_settings.unit }}</span></div></div>
-            <button type="submit" class="bg-gray-800 dark:bg-zinc-700 text-white font-medium text-sm py-2 px-5 rounded shadow self-end md:mb-1">Add</button>
+        <form action="{{ ingress_path }}/api/{{ current_vin }}/add_service" method="POST" class="flex flex-col gap-3">
+            {# Row 1: identity fields #}
+            <div class="flex flex-col md:flex-row flex-wrap gap-3">
+                <div class="flex flex-col gap-1 flex-1 min-w-[120px]"><span class="text-[10px] text-gray-500 dark:text-zinc-400 font-bold uppercase tracking-wide">Category</span><input type="text" name="category" placeholder="e.g. Engine" required class="text-sm border dark:border-zinc-700 rounded p-2 w-full bg-white dark:bg-zinc-900 dark:text-white focus-ring-accent"></div>
+                <div class="flex flex-col gap-1 flex-1 min-w-[150px]"><span class="text-[10px] text-gray-500 dark:text-zinc-400 font-bold uppercase tracking-wide">Service Name</span><input type="text" name="name" placeholder="e.g. Timing Belt" required class="text-sm border dark:border-zinc-700 rounded p-2 w-full bg-white dark:bg-zinc-900 dark:text-white focus-ring-accent"></div>
+                <div class="flex flex-col gap-1 flex-1 min-w-[150px]"><span class="text-[10px] text-gray-500 dark:text-zinc-400 font-bold uppercase tracking-wide">Required Parts / Notes</span><input type="text" name="parts_info" placeholder="e.g. 5.5Qts 5W-30" class="text-sm border dark:border-zinc-700 rounded p-2 w-full bg-white dark:bg-zinc-900 dark:text-white focus-ring-accent"></div>
+            </div>
+            {# Row 2: intervals + inspection toggle + submit #}
+            <div class="flex flex-col md:flex-row flex-wrap gap-3 items-end">
+                <div class="flex flex-col gap-1 w-full md:w-32"><span class="text-[10px] text-gray-500 dark:text-zinc-400 font-bold uppercase tracking-wide">Months</span><div class="flex items-center gap-1.5"><input type="number" name="interval_months" required class="text-sm border dark:border-zinc-700 rounded p-2 w-full text-center bg-white dark:bg-zinc-900 dark:text-white focus-ring-accent"><span class="text-xs text-gray-500 dark:text-zinc-400 font-medium">mo</span></div></div>
+                <div class="flex flex-col gap-1 w-full md:w-32"><span class="text-[10px] text-gray-500 dark:text-zinc-400 font-bold uppercase tracking-wide">{{ 'Kilometers' if global_settings.unit == 'km' else 'Miles' }}</span><div class="flex items-center gap-1.5"><input type="number" name="interval_miles" required class="text-sm border dark:border-zinc-700 rounded p-2 w-full text-center bg-white dark:bg-zinc-900 dark:text-white focus-ring-accent"><span class="text-xs text-gray-500 dark:text-zinc-400 font-medium">{{ global_settings.unit }}</span></div></div>
+                {# Inspection toggle — same structure as Month/Miles so it aligns #}
+                <div class="flex flex-col gap-1">
+                    <span class="text-[10px] text-gray-500 dark:text-zinc-400 font-bold uppercase tracking-wide">Inspection</span>
+                    <label class="inline-flex items-center gap-2 cursor-pointer h-[38px] px-1">
+                        <input type="checkbox" class="sr-only peer" onchange="toggleInspection(this, 'new')">
+                        <div class="w-9 h-5 bg-gray-300 dark:bg-zinc-600 peer-checked:bg-accent rounded-full relative transition-colors duration-200 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:w-4 after:h-4 after:bg-white after:rounded-full after:shadow after:transition-transform after:duration-200 peer-checked:after:translate-x-4"></div>
+                        <span class="text-sm font-medium text-gray-500 dark:text-zinc-400 peer-checked:text-accent transition-colors duration-200">Enable</span>
+                    </label>
+                </div>
+                <button type="submit" class="bg-gray-800 dark:bg-zinc-700 text-white font-medium text-sm py-2 px-5 rounded shadow self-end">Add</button>
+            </div>
+            {# Collapsible inspection interval fields — revealed when toggle is on #}
+            <div id="inspect-fields-new" class="hidden flex-wrap gap-3 items-end pt-2 border-t border-accent/20">
+                <div class="flex flex-col gap-1 w-full md:w-32"><span class="text-[10px] text-accent font-bold uppercase tracking-wide">Inspect mo</span><div class="flex items-center gap-1.5"><input type="number" name="inspect_interval_months" value="0" min="0" class="text-sm border border-accent/30 rounded p-2 w-full text-center bg-white dark:bg-zinc-900 dark:text-white focus-ring-accent"><span class="text-xs text-gray-500 dark:text-zinc-400 font-medium">mo</span></div></div>
+                <div class="flex flex-col gap-1 w-full md:w-32"><span class="text-[10px] text-accent font-bold uppercase tracking-wide">Inspect {{ global_settings.unit }}</span><div class="flex items-center gap-1.5"><input type="number" name="inspect_interval_miles" value="0" min="0" class="text-sm border border-accent/30 rounded p-2 w-full text-center bg-white dark:bg-zinc-900 dark:text-white focus-ring-accent"><span class="text-xs text-gray-500 dark:text-zinc-400 font-medium">{{ global_settings.unit }}</span></div></div>
+            </div>
         </form>
     </div>
 
@@ -55,31 +76,69 @@
 
     <div class="space-y-3">
         {% for s in services %}
+        {% set inspect_enabled = (s.inspect_interval_months or s.inspect_interval_miles) %}
         <div class="bg-white dark:bg-zinc-900 border dark:border-zinc-800 p-4 rounded-lg shadow-sm transition-all">
+
+            {# ── View mode ── #}
             <div id="view-interval-{{ s.id }}" class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div class="admin-only flex items-center shrink-0 self-center">
                     <input type="checkbox" class="interval-checkbox rounded border-gray-300 dark:border-zinc-600 text-accent focus:ring-accent" data-id="{{ s.id }}" onchange="updateSelectionToolbar('interval')">
                 </div>
-                <div class="flex-1 w-full border-b md:border-b-0 md:border-r border-gray-100 dark:border-zinc-800 pb-3 md:pb-0 pr-0 md:pr-4"><p class="text-[10px] text-gray-500 dark:text-zinc-400 font-bold uppercase tracking-wide mb-1">{{ s.category }}</p><p class="font-bold text-lg text-gray-800 dark:text-gray-100">{{ s.name }}</p></div>
-                <div class="flex gap-6 w-full md:w-auto text-left md:text-center justify-start md:justify-center px-0 md:px-4"><div><p class="font-bold text-xl text-accent">{{ s.interval_months }} <span class="text-sm font-normal text-gray-500 dark:text-zinc-400">mo</span></p></div><div><p class="font-bold text-xl text-accent">{{ "{:,}".format(s.interval_miles) }} <span class="text-sm font-normal text-gray-500 dark:text-zinc-400">{{ global_settings.unit }}</span></p></div></div>
+                <div class="flex-1 w-full border-b md:border-b-0 md:border-r border-gray-100 dark:border-zinc-800 pb-3 md:pb-0 pr-0 md:pr-4">
+                    <p class="text-[10px] text-gray-500 dark:text-zinc-400 font-bold uppercase tracking-wide mb-1">{{ s.category }}</p>
+                    <p class="font-bold text-lg text-gray-800 dark:text-gray-100">{{ s.name }}</p>
+                </div>
+                <div class="flex flex-col gap-1.5 w-full md:w-auto px-0 md:px-4">
+                    <div class="flex gap-6 text-left md:text-center justify-start md:justify-center">
+                        <div><p class="font-bold text-xl text-accent">{{ s.interval_months }} <span class="text-sm font-normal text-gray-500 dark:text-zinc-400">mo</span></p></div>
+                        <div><p class="font-bold text-xl text-accent">{{ "{:,}".format(s.interval_miles) }} <span class="text-sm font-normal text-gray-500 dark:text-zinc-400">{{ global_settings.unit }}</span></p></div>
+                    </div>
+                    {% if inspect_enabled %}
+                    <div class="flex gap-2 items-center">
+                        <span class="text-[10px] font-bold uppercase tracking-wide text-accent">Inspect every:</span>
+                        <span class="text-xs text-accent font-medium">
+                            {% if s.inspect_interval_months %}{{ s.inspect_interval_months }} mo{% endif %}{% if s.inspect_interval_months and s.inspect_interval_miles %} / {% endif %}{% if s.inspect_interval_miles %}{{ "{:,}".format(s.inspect_interval_miles) }} {{ global_settings.unit }}{% endif %}
+                        </span>
+                    </div>
+                    {% endif %}
+                </div>
                 <div class="flex gap-2 w-full md:w-auto justify-end pt-2 md:pt-0 admin-only">
-                    
                     <button type="button" data-service="{{ s | tojson | forceescape }}" onclick="openServiceDetails(JSON.parse(this.dataset.service), '{{ current_vin }}', true)" class="bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400 text-xs py-2 px-4 rounded-md font-bold transition hover:bg-indigo-100 dark:hover:bg-indigo-900/40 shadow-sm border border-indigo-200 dark:border-indigo-800 flex items-center gap-1">🛠️ Garage Setup</button>
-                    
                     <button type="button" onclick="toggleEdit('interval', '{{ s.id }}')" class="bg-gray-100 dark:bg-zinc-800 text-gray-800 dark:text-gray-200 text-xs py-2 px-4 rounded-md font-bold transition hover:bg-gray-200 dark:hover:bg-zinc-700 shadow-sm">Edit</button>
                     <form action="{{ ingress_path }}/api/{{ current_vin }}/delete_service/{{ s.id }}" method="POST" onsubmit="return confirm('Delete {{ s.name }}?');"><button type="submit" class="bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 text-xs py-2 px-4 rounded-md font-bold transition">Delete</button></form>
                 </div>
             </div>
-            <form id="edit-interval-{{ s.id }}" action="{{ ingress_path }}/api/{{ current_vin }}/update_service/{{ s.id }}" method="POST" class="hidden flex-col md:flex-row flex-wrap gap-4 w-full items-end md:items-center bg-gray-50 dark:bg-zinc-800/50 p-3 rounded">
-                <div class="flex flex-col gap-1 w-full md:w-1/4 shrink-0"><span class="text-[10px] text-gray-500 dark:text-zinc-400 font-bold uppercase tracking-wide">Category</span><input type="text" name="category" value="{{ s.category }}" class="text-sm border dark:border-zinc-600 rounded p-2 w-full bg-white dark:bg-zinc-900 dark:text-white focus-ring-accent"></div>
-                <div class="flex flex-col gap-1 w-full md:w-1/3 shrink-0"><span class="text-[10px] text-gray-500 dark:text-zinc-400 font-bold uppercase tracking-wide">Service Name</span><input type="text" name="name" value="{{ s.name }}" class="text-sm border dark:border-zinc-600 rounded p-2 w-full font-medium bg-white dark:bg-zinc-900 dark:text-white focus-ring-accent"></div>
-                <div class="flex flex-col gap-1 w-full md:w-1/3 shrink-0"><span class="text-[10px] text-gray-500 dark:text-zinc-400 font-bold uppercase tracking-wide">Required Parts / Notes</span><input type="text" name="parts_info" value="{{ s.parts_info }}" class="text-sm border dark:border-zinc-600 rounded p-2 w-full bg-white dark:bg-zinc-900 dark:text-white focus-ring-accent"></div>
-                
-                <div class="flex flex-col gap-1 w-full md:w-32 shrink-0"><span class="text-[10px] text-gray-500 dark:text-zinc-400 font-bold uppercase tracking-wide">Months</span><div class="flex items-center gap-1.5 w-full"><input type="number" name="interval_months" value="{{ s.interval_months }}" class="text-sm border dark:border-zinc-600 rounded p-2 w-full text-center bg-white dark:bg-zinc-900 dark:text-white focus-ring-accent"><span class="text-xs text-gray-500 dark:text-zinc-400 font-medium">mo</span></div></div>
-                <div class="flex flex-col gap-1 w-full md:w-32 shrink-0"><span class="text-[10px] text-gray-500 dark:text-zinc-400 font-bold uppercase tracking-wide">{{ 'Kilometers' if global_settings.unit == 'km' else 'Miles' }}</span><div class="flex items-center gap-1.5 w-full"><input type="number" name="interval_miles" value="{{ s.interval_miles }}" class="text-sm border dark:border-zinc-600 rounded p-2 w-full text-center bg-white dark:bg-zinc-900 dark:text-white focus-ring-accent"><span class="text-xs text-gray-500 dark:text-zinc-400 font-medium">{{ global_settings.unit }}</span></div></div>
-                
-                <div class="flex gap-2 w-full md:w-auto shrink-0 justify-end md:mb-0.5"><button type="submit" class="bg-accent text-white text-xs py-2 px-4 rounded-md font-bold transition shadow-sm">Save</button><button type="button" onclick="toggleEdit('interval', '{{ s.id }}')" class="bg-gray-200 dark:bg-zinc-700 text-gray-800 dark:text-gray-200 text-xs py-2 px-3 rounded-md font-bold">Cancel</button></div>
+
+            {# ── Edit mode ── #}
+            <form id="edit-interval-{{ s.id }}" action="{{ ingress_path }}/api/{{ current_vin }}/update_service/{{ s.id }}" method="POST" class="hidden flex-col gap-4 w-full mt-3 bg-gray-50 dark:bg-zinc-800/50 p-4 rounded-lg border dark:border-zinc-700">
+                {# Row 1: name fields #}
+                <div class="flex flex-col md:flex-row flex-wrap gap-3">
+                    <div class="flex flex-col gap-1 w-full md:w-1/4"><span class="text-[10px] text-gray-500 dark:text-zinc-400 font-bold uppercase tracking-wide">Category</span><input type="text" name="category" value="{{ s.category }}" class="text-sm border dark:border-zinc-600 rounded p-2 w-full bg-white dark:bg-zinc-900 dark:text-white focus-ring-accent"></div>
+                    <div class="flex flex-col gap-1 flex-1 min-w-[150px]"><span class="text-[10px] text-gray-500 dark:text-zinc-400 font-bold uppercase tracking-wide">Service Name</span><input type="text" name="name" value="{{ s.name }}" class="text-sm border dark:border-zinc-600 rounded p-2 w-full font-medium bg-white dark:bg-zinc-900 dark:text-white focus-ring-accent"></div>
+                    <div class="flex flex-col gap-1 flex-1 min-w-[150px]"><span class="text-[10px] text-gray-500 dark:text-zinc-400 font-bold uppercase tracking-wide">Required Parts / Notes</span><input type="text" name="parts_info" value="{{ s.parts_info }}" class="text-sm border dark:border-zinc-600 rounded p-2 w-full bg-white dark:bg-zinc-900 dark:text-white focus-ring-accent"></div>
+                </div>
+                {# Row 2: intervals + inspection toggle + Save/Cancel #}
+                <div class="flex flex-col md:flex-row flex-wrap gap-3 items-end">
+                    <div class="flex flex-col gap-1 w-full md:w-32"><span class="text-[10px] text-gray-500 dark:text-zinc-400 font-bold uppercase tracking-wide">Months</span><div class="flex items-center gap-1.5"><input type="number" name="interval_months" value="{{ s.interval_months }}" class="text-sm border dark:border-zinc-600 rounded p-2 w-full text-center bg-white dark:bg-zinc-900 dark:text-white focus-ring-accent"><span class="text-xs text-gray-500 dark:text-zinc-400 font-medium">mo</span></div></div>
+                    <div class="flex flex-col gap-1 w-full md:w-32"><span class="text-[10px] text-gray-500 dark:text-zinc-400 font-bold uppercase tracking-wide">{{ 'Kilometers' if global_settings.unit == 'km' else 'Miles' }}</span><div class="flex items-center gap-1.5"><input type="number" name="interval_miles" value="{{ s.interval_miles }}" class="text-sm border dark:border-zinc-600 rounded p-2 w-full text-center bg-white dark:bg-zinc-900 dark:text-white focus-ring-accent"><span class="text-xs text-gray-500 dark:text-zinc-400 font-medium">{{ global_settings.unit }}</span></div></div>
+                    {# Inspection toggle — same structure as Month/Miles so it aligns #}
+                    <div class="flex flex-col gap-1">
+                        <span class="text-[10px] text-gray-500 dark:text-zinc-400 font-bold uppercase tracking-wide">Inspection</span>
+                        <label class="inline-flex items-center gap-2 cursor-pointer h-[38px] px-1">
+                            <input type="checkbox" class="sr-only peer" onchange="toggleInspection(this, '{{ s.id }}')" {% if inspect_enabled %}checked{% endif %}>
+                            <div class="w-9 h-5 bg-gray-300 dark:bg-zinc-600 peer-checked:bg-accent rounded-full relative transition-colors duration-200 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:w-4 after:h-4 after:bg-white after:rounded-full after:shadow after:transition-transform after:duration-200 peer-checked:after:translate-x-4"></div>
+                            <span class="text-sm font-medium text-gray-500 dark:text-zinc-400 peer-checked:text-accent transition-colors duration-200">Enable</span>
+                        </label>
+                    </div>
+                    <div class="flex gap-2 shrink-0 self-end"><button type="submit" class="bg-accent text-white text-xs py-2 px-4 rounded-md font-bold transition shadow-sm">Save</button><button type="button" onclick="toggleEdit('interval', '{{ s.id }}')" class="bg-gray-200 dark:bg-zinc-700 text-gray-800 dark:text-gray-200 text-xs py-2 px-3 rounded-md font-bold">Cancel</button></div>
+                </div>
+                {# Collapsible inspection fields — revealed when toggle is on #}
+                <div id="inspect-fields-{{ s.id }}" class="{{ 'flex' if inspect_enabled else 'hidden' }} flex-wrap gap-3 items-end pt-2 border-t border-accent/20">
+                    <div class="flex flex-col gap-1 w-full md:w-32"><span class="text-[10px] text-accent font-bold uppercase tracking-wide">Inspect mo</span><div class="flex items-center gap-1.5"><input type="number" name="inspect_interval_months" value="{{ s.inspect_interval_months or 0 }}" min="0" class="text-sm border border-accent/30 rounded p-2 w-full text-center bg-white dark:bg-zinc-900 dark:text-white focus-ring-accent"><span class="text-xs text-gray-500 dark:text-zinc-400 font-medium">mo</span></div></div>
+                    <div class="flex flex-col gap-1 w-full md:w-32"><span class="text-[10px] text-accent font-bold uppercase tracking-wide">Inspect {{ global_settings.unit }}</span><div class="flex items-center gap-1.5"><input type="number" name="inspect_interval_miles" value="{{ s.inspect_interval_miles or 0 }}" min="0" class="text-sm border border-accent/30 rounded p-2 w-full text-center bg-white dark:bg-zinc-900 dark:text-white focus-ring-accent"><span class="text-xs text-gray-500 dark:text-zinc-400 font-medium">{{ global_settings.unit }}</span></div></div>
+                </div>
             </form>
+
         </div>
         {% endfor %}
     </div>

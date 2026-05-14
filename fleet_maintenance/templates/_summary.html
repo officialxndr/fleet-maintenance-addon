@@ -11,7 +11,7 @@
         </div>
     </div>
     {% endif %}
-        
+
     <div class="flex flex-col md:flex-row gap-4 mb-6">
         <div class="w-full md:w-3/4 flex flex-col md:flex-row gap-4 items-center justify-between bg-gray-50 dark:bg-zinc-800/50 p-4 rounded-lg border dark:border-zinc-800 shadow-sm relative z-0">
             <div class="w-full md:w-1/2">
@@ -26,7 +26,7 @@
                 </select>
             </div>
         </div>
-        
+
         <div class="w-full md:w-1/4 bg-gray-50 dark:bg-zinc-800/50 p-4 rounded-lg border dark:border-zinc-800 shadow-sm flex flex-col justify-center">
             <p class="text-[10px] text-gray-500 dark:text-zinc-400 font-bold uppercase tracking-wide mb-1">Total Cost of Ownership</p>
             <div class="flex justify-between items-end">
@@ -42,23 +42,28 @@
 
     <div id="summary-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 relative z-0">
         {% for s in services %}
-        <div class="service-card p-4 rounded-lg border flex flex-col justify-between dark:border-zinc-800 
-            {% if s.status == 'Past Due' %} bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-900/30 shadow-sm 
-            {% elif s.status == 'Coming Up' %} bg-yellow-50 dark:bg-yellow-900/10 border-yellow-200 dark:border-yellow-900/30 
+        <div class="service-card p-4 rounded-lg border flex flex-col justify-between dark:border-zinc-800
+            {% if s.status == 'Past Due' %} bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-900/30 shadow-sm
+            {% elif s.status == 'Coming Up' %} bg-yellow-50 dark:bg-yellow-900/10 border-yellow-200 dark:border-yellow-900/30
             {% elif s.status == 'Needs Baseline' %} bg-blue-50 dark:bg-blue-900/10 border-blue-200 dark:border-blue-900/30 shadow-sm
             {% else %} bg-gray-50 dark:bg-zinc-800/50 opacity-90 {% endif %}"
             data-name="{{ s.name|lower }}" data-status="{{ s.status }}" data-priority="{{ s.priority }}">
-            
+
             <div>
                 <div class="flex justify-between items-start mb-2">
                     <h3 class="font-bold {{ 'text-red-700 dark:text-red-400' if s.status == 'Past Due' else 'text-gray-800 dark:text-gray-100' }}">{{ s.name }}</h3>
-                    <span class="text-[11px] font-bold px-2 py-1 rounded shadow-sm border 
-                        {% if s.status == 'Past Due' %} bg-red-100 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800 
-                        {% elif s.status == 'Coming Up' %} bg-yellow-100 text-yellow-700 border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-400 dark:border-yellow-800 
-                        {% elif s.status == 'Needs Baseline' %} bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800 
-                        {% else %} bg-green-100 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800 {% endif %}">{{ s.status }}</span>
+                    <div class="flex flex-row items-start gap-1 flex-wrap justify-end">
+                        <span data-inspect-badge class="text-[11px] font-bold px-2 py-1 rounded shadow-sm border bg-accent/10 text-accent border-accent/30 {% if s.inspect_status not in ('Inspect Due', 'Inspect Soon') %}hidden{% endif %}">
+                            {% if s.inspect_status in ('Inspect Due', 'Inspect Soon') %}{{ s.inspect_status }}{% endif %}
+                        </span>
+                        <span data-status-badge class="text-[11px] font-bold px-2 py-1 rounded shadow-sm border
+                            {% if s.status == 'Past Due' %} bg-red-100 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800
+                            {% elif s.status == 'Coming Up' %} bg-yellow-100 text-yellow-700 border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-400 dark:border-yellow-800
+                            {% elif s.status == 'Needs Baseline' %} bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800
+                            {% else %} bg-green-100 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800 {% endif %}">{{ s.status }}</span>
+                    </div>
                 </div>
-                
+
                 <div class="flex justify-between items-center mb-3 border-b dark:border-zinc-700 pb-2">
                     <p class="text-xs text-gray-500 dark:text-zinc-400 uppercase">{{ s.category }}</p>
                     <button data-service="{{ s | tojson | forceescape }}" data-admin="{{ 'false' if shared_mode else 'true' }}"
@@ -66,37 +71,75 @@
                         class="bg-accent/10 hover:bg-accent/20 border border-accent/30 text-accent text-[10px] font-bold py-1.5 px-3 rounded-md shadow-sm transition flex items-center gap-1.5 whitespace-nowrap">🛠️ Garage Mode</button>
                 </div>
 
-                <div class="text-xs space-y-2 mb-4 text-gray-600 dark:text-zinc-300">
-                    <div class="flex justify-between items-center"><span>Last Service:</span> 
+                <div class="text-xs space-y-2 mb-2 text-gray-600 dark:text-zinc-300">
+                    <p class="text-[10px] text-gray-400 dark:text-zinc-500 font-bold uppercase tracking-wide">Service</p>
+                    <div class="flex justify-between items-center"><span>Last Service:</span>
                         <span class="font-medium bg-white dark:bg-zinc-800 px-2 py-1 rounded border dark:border-zinc-700">
                             {% if s.status == 'Needs Baseline' %} Never Logged
                             {% else %}{{ s.last_service_date_formatted | format_date(global_settings.date_format) }} <span class="text-gray-300 dark:text-zinc-600 mx-1">|</span> {{ "{:,}".format(s.last_service_miles) }} {{ global_settings.unit }} {% endif %}
                         </span>
                     </div>
-                    <div class="flex justify-between items-center"><span>Due At:</span> 
+                    <div class="flex justify-between items-center"><span>Due At:</span>
                         <span class="font-medium bg-white dark:bg-zinc-800 px-2 py-1 rounded border dark:border-zinc-700 {% if s.predicted %}border-accent text-accent{% endif %}" {% if s.predicted %}title="Projected via driving habits"{% endif %}>
                             {% if s.status == 'Needs Baseline' %} TBD
                             {% else %}{% if s.predicted %}🔮 {% endif %}{{ s.due_date_str | format_date(global_settings.date_format) }} <span class="text-gray-300 dark:text-zinc-600 mx-1">|</span> {{ "{:,}".format(s.due_miles) }} {{ global_settings.unit }} {% endif %}
                         </span>
                     </div>
-                    <div class="flex justify-between mt-3 pt-3 border-t dark:border-zinc-700"><span>Remaining:</span> 
+                    <div class="flex justify-between mt-3 pt-3 border-t dark:border-zinc-700"><span>Remaining:</span>
                         <span class="{{ 'text-red-600 dark:text-red-400 font-bold' if s.status == 'Past Due' else 'font-bold text-gray-800 dark:text-gray-100' }}">
                             {% if s.status == 'Needs Baseline' %} Log service to track
                             {% else %}{{ "{:,}".format(s.miles_remaining) }} {{ global_settings.unit }} <span class="text-gray-300 dark:text-zinc-600 mx-1">|</span> {{ s.months_remaining }} mo{% endif %}
                         </span>
                     </div>
                 </div>
-            </div>
-            {% if not shared_mode %}
-            <div class="log-service-form mt-auto border-t dark:border-zinc-700 pt-3 flex flex-col gap-2 admin-only" data-action="{{ ingress_path }}/api/{{ current_vin }}/add_log">
-                <input type="hidden" name="service_name" value="{{ s.id }}">
-                <input type="hidden" name="action" value="log_and_track">
-                <div class="flex gap-2">
-                    <input type="date" name="date" value="{{ today_date }}" required class="text-xs border dark:border-zinc-700 rounded p-1.5 w-1/3 bg-white dark:bg-zinc-800 dark:text-white">
-                    <input type="number" name="mileage" value="{{ vehicle_data.current_mileage }}" required class="text-xs border dark:border-zinc-700 rounded p-1.5 w-1/3 bg-white dark:bg-zinc-800 dark:text-white">
-                    <input type="text" name="notes" placeholder="Notes..." class="text-xs border dark:border-zinc-700 rounded p-1.5 w-1/3 bg-white dark:bg-zinc-800 dark:text-white">
+
+                {% if s.inspect_interval_months or s.inspect_interval_miles %}
+                <div data-inspect-section class="mt-3 pt-3 border-t border-accent/20">
+                    <p class="text-[10px] text-accent font-bold uppercase tracking-wide mb-2">Inspection</p>
+                    <div class="space-y-2 text-xs text-gray-600 dark:text-zinc-300">
+                        <div class="flex justify-between items-center"><span>Inspect Due:</span>
+                            <span data-inspect-due class="font-medium bg-white dark:bg-zinc-800 px-2 py-1 rounded border dark:border-zinc-700 {% if s.inspect_status in ('Inspect Due', 'Inspect Soon') %}border-accent text-accent{% endif %}">
+                                {% if not s.inspect_due_date_str %} TBD
+                                {% else %}{{ s.inspect_due_date_str | format_date(global_settings.date_format) }}{% if s.inspect_due_miles %} <span class="text-gray-300 dark:text-zinc-600 mx-1">|</span> {{ "{:,}".format(s.inspect_due_miles) }} {{ global_settings.unit }}{% endif %}{% endif %}
+                            </span>
+                        </div>
+                        <div class="flex justify-between items-center"><span>Remaining:</span>
+                            <span data-inspect-remaining class="font-bold {% if s.inspect_status == 'Inspect Due' %}text-red-600 dark:text-red-400{% else %}text-gray-800 dark:text-gray-100{% endif %}">
+                                {% if s.inspect_miles_remaining is not none %}{{ "{:,}".format(s.inspect_miles_remaining) }} {{ global_settings.unit }}{% endif %}
+                                {% if s.inspect_miles_remaining is not none and s.inspect_months_remaining is not none %}<span class="text-gray-300 dark:text-zinc-600 mx-1">|</span>{% endif %}
+                                {% if s.inspect_months_remaining is not none %}{{ s.inspect_months_remaining }} mo{% endif %}
+                            </span>
+                        </div>
+                    </div>
                 </div>
-                <button type="button" onclick="submitLogService(this)" class="bg-green-600 bg-accent text-sm py-2 px-3 rounded w-full font-bold text-white transition hover:brightness-90">✓ Log Service</button>
+                {% endif %}
+            </div>
+
+            {% if not shared_mode %}
+            <div class="mt-3 pt-3 border-t dark:border-zinc-700 flex flex-col gap-2">
+                <div class="log-service-form flex flex-col gap-2 admin-only" data-action="{{ ingress_path }}/api/{{ current_vin }}/add_log">
+                    <input type="hidden" name="service_name" value="{{ s.id }}">
+                    <input type="hidden" name="action" value="log_and_track">
+                    <p class="text-[10px] text-gray-400 dark:text-zinc-500 font-bold uppercase tracking-wide">Log Service</p>
+                    <div class="flex gap-2">
+                        <input type="date" name="date" value="{{ today_date }}" required class="text-xs border dark:border-zinc-700 rounded p-1.5 w-1/3 bg-white dark:bg-zinc-800 dark:text-white">
+                        <input type="number" name="mileage" value="{{ vehicle_data.current_mileage }}" required class="text-xs border dark:border-zinc-700 rounded p-1.5 w-1/3 bg-white dark:bg-zinc-800 dark:text-white">
+                        <input type="text" name="notes" placeholder="Notes..." class="text-xs border dark:border-zinc-700 rounded p-1.5 w-1/3 bg-white dark:bg-zinc-800 dark:text-white">
+                    </div>
+                    <button type="button" onclick="submitLogService(this)" class="bg-green-600 bg-accent text-sm py-2 px-3 rounded w-full font-bold text-white transition hover:brightness-90">✓ Log Service</button>
+                </div>
+
+                {% if s.inspect_interval_months or s.inspect_interval_miles %}
+                <form action="{{ ingress_path }}/api/{{ current_vin }}/log_inspection/{{ s.id }}" method="POST" class="flex flex-col gap-2 admin-only pt-2 border-t border-accent/20">
+                    <p class="text-[10px] text-accent font-bold uppercase tracking-wide">Log Inspection</p>
+                    <div class="flex gap-2">
+                        <input type="date" name="date" value="{{ today_date }}" required class="text-xs border dark:border-zinc-700 rounded p-1.5 w-1/3 bg-white dark:bg-zinc-800 dark:text-white">
+                        <input type="number" name="mileage" value="{{ vehicle_data.current_mileage }}" required class="text-xs border dark:border-zinc-700 rounded p-1.5 w-1/3 bg-white dark:bg-zinc-800 dark:text-white">
+                        <input type="text" name="notes" placeholder="Notes..." class="text-xs border dark:border-zinc-700 rounded p-1.5 w-1/3 bg-white dark:bg-zinc-800 dark:text-white">
+                    </div>
+                    <button type="submit" class="bg-accent text-sm py-2 px-3 rounded w-full font-bold text-white transition hover:brightness-90">Log Inspection</button>
+                </form>
+                {% endif %}
             </div>
             {% endif %}
         </div>

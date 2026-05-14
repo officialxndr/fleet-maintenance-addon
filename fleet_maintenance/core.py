@@ -135,16 +135,20 @@ CREATE TABLE IF NOT EXISTS vehicles (
 );
 
 CREATE TABLE IF NOT EXISTS services (
-    id                 TEXT PRIMARY KEY,
-    vin                TEXT NOT NULL,
-    category           TEXT NOT NULL DEFAULT 'Other',
-    name               TEXT NOT NULL,
-    interval_months    INTEGER NOT NULL DEFAULT 0,
-    interval_miles     INTEGER NOT NULL DEFAULT 0,
-    parts_info         TEXT NOT NULL DEFAULT '',
-    last_service_miles INTEGER,                  -- nullable
-    last_service_date  TEXT,                     -- nullable (YYYY-MM-DD)
-    sort_order         INTEGER NOT NULL DEFAULT 0,
+    id                      TEXT PRIMARY KEY,
+    vin                     TEXT NOT NULL,
+    category                TEXT NOT NULL DEFAULT 'Other',
+    name                    TEXT NOT NULL,
+    interval_months         INTEGER NOT NULL DEFAULT 0,
+    interval_miles          INTEGER NOT NULL DEFAULT 0,
+    parts_info              TEXT NOT NULL DEFAULT '',
+    last_service_miles      INTEGER,                  -- nullable
+    last_service_date       TEXT,                     -- nullable (YYYY-MM-DD)
+    inspect_interval_months INTEGER NOT NULL DEFAULT 0,
+    inspect_interval_miles  INTEGER NOT NULL DEFAULT 0,
+    last_inspect_date       TEXT,                     -- nullable (YYYY-MM-DD)
+    last_inspect_miles      INTEGER,                  -- nullable
+    sort_order              INTEGER NOT NULL DEFAULT 0,
     FOREIGN KEY (vin) REFERENCES vehicles(vin) ON DELETE CASCADE
 );
 CREATE INDEX IF NOT EXISTS idx_services_vin ON services(vin);
@@ -236,6 +240,20 @@ def _init_schema():
             conn.execute("COMMIT")
 
 
+def _upgrade_schema():
+    """Add columns introduced after initial schema creation (safe on existing DBs)."""
+    with _connect() as conn:
+        existing = {row[1] for row in conn.execute("PRAGMA table_info(services)")}
+        for col, coldef in [
+            ("inspect_interval_months", "INTEGER NOT NULL DEFAULT 0"),
+            ("inspect_interval_miles",  "INTEGER NOT NULL DEFAULT 0"),
+            ("last_inspect_date",       "TEXT"),
+            ("last_inspect_miles",      "INTEGER"),
+        ]:
+            if col not in existing:
+                conn.execute(f"ALTER TABLE services ADD COLUMN {col} {coldef}")
+
+
 def _db_has_vehicles():
     with _connect() as conn:
         return conn.execute("SELECT COUNT(*) FROM vehicles").fetchone()[0] > 0
@@ -311,6 +329,7 @@ def _migrate_from_json():
 # have a valid DB to talk to. Migration runs later (see end of file) because
 # it depends on save_db being defined.
 _init_schema()
+_upgrade_schema()
 
 
 # ==========================================
@@ -358,7 +377,9 @@ def load_db():
         services_by_vin = {}
         for row in conn.execute(
             "SELECT id, vin, category, name, interval_months, interval_miles, "
-            "       parts_info, last_service_miles, last_service_date "
+            "       parts_info, last_service_miles, last_service_date, "
+            "       inspect_interval_months, inspect_interval_miles, "
+            "       last_inspect_date, last_inspect_miles "
             "FROM services ORDER BY vin, sort_order"
         ):
             services_by_vin.setdefault(row["vin"], []).append({
@@ -370,6 +391,10 @@ def load_db():
                 "parts_info": row["parts_info"],
                 "last_service_miles": row["last_service_miles"],
                 "last_service_date": row["last_service_date"],
+                "inspect_interval_months": row["inspect_interval_months"],
+                "inspect_interval_miles": row["inspect_interval_miles"],
+                "last_inspect_date": row["last_inspect_date"],
+                "last_inspect_miles": row["last_inspect_miles"],
                 "garage_parts": [],
                 "garage_torque": [],
             })
@@ -558,11 +583,16 @@ def save_db(data, sync_mqtt=True):
                     last_miles = s.get("last_service_miles")
                     last_miles = int(last_miles) if last_miles not in (None, "") else None
                     last_date = s.get("last_service_date") or None
+                    last_inspect_miles = s.get("last_inspect_miles")
+                    last_inspect_miles = int(last_inspect_miles) if last_inspect_miles not in (None, "") else None
+                    last_inspect_date = s.get("last_inspect_date") or None
                     conn.execute(
                         """INSERT INTO services
                            (id, vin, category, name, interval_months, interval_miles, parts_info,
-                            last_service_miles, last_service_date, sort_order)
-                           VALUES (?,?,?,?,?,?,?,?,?,?)""",
+                            last_service_miles, last_service_date,
+                            inspect_interval_months, inspect_interval_miles,
+                            last_inspect_date, last_inspect_miles, sort_order)
+                           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
                         (
                             sid, vin,
                             s.get("category", "Other") or "Other",
@@ -570,7 +600,11 @@ def save_db(data, sync_mqtt=True):
                             int(s.get("interval_months", 0) or 0),
                             int(s.get("interval_miles", 0) or 0),
                             s.get("parts_info", "") or "",
-                            last_miles, last_date, s_idx,
+                            last_miles, last_date,
+                            int(s.get("inspect_interval_months", 0) or 0),
+                            int(s.get("inspect_interval_miles", 0) or 0),
+                            last_inspect_date, last_inspect_miles,
+                            s_idx,
                         ),
                     )
 
@@ -732,7 +766,11 @@ def calculate_status(vehicle_data, global_settings):
                 "miles_remaining": "N/A", "months_remaining": "N/A",
                 "last_service_date_formatted": "None",
                 "due_date_str": "TBD", "due_miles": "TBD",
-                "status": "Needs Baseline", "predicted": False, "priority": idx})
+                "status": "Needs Baseline", "predicted": False, "priority": idx,
+                "inspect_status": None, "inspect_due_date_str": None,
+                "inspect_miles_remaining": None, "inspect_months_remaining": None,
+                "inspect_due_miles": None,
+            })
             continue
 
         miles_remaining = s.get("interval_miles", 0) - (current_miles - last_miles_raw)
@@ -747,17 +785,54 @@ def calculate_status(vehicle_data, global_settings):
         days_remaining = (due_date_time - datetime.now()).days
         months_remaining = days_remaining // 30
 
+        coming_up_miles = int(global_settings.get("coming_up_miles", 1000))
+        coming_up_months = int(global_settings.get("coming_up_months", 1))
+
         status = ("Past Due" if miles_remaining < 0 or days_remaining < 0
-                  else "Coming Up" if (miles_remaining <= int(global_settings.get("coming_up_miles", 1000))
-                                       or months_remaining <= int(global_settings.get("coming_up_months", 1)))
+                  else "Coming Up" if (miles_remaining <= coming_up_miles
+                                       or months_remaining <= coming_up_months)
                   else "All Good")
+
+        # --- Inspection interval (secondary, optional) ---
+        inspect_status = None
+        inspect_due_date_str = None
+        inspect_miles_remaining = None
+        inspect_months_remaining = None
+        inspect_due_miles = None
+
+        i_months = int(s.get("inspect_interval_months", 0) or 0)
+        i_miles  = int(s.get("inspect_interval_miles", 0) or 0)
+
+        if i_months or i_miles:
+            i_base_date  = s.get("last_inspect_date") or last_date_raw
+            i_base_miles = s.get("last_inspect_miles") if s.get("last_inspect_miles") is not None else last_miles_raw
+            i_miles_rem  = i_miles - (current_miles - i_base_miles) if i_miles else float("inf")
+            i_due_dt     = add_months(parse_date(i_base_date), i_months) if i_months else None
+            i_days_rem   = (i_due_dt - datetime.now()).days if i_due_dt else float("inf")
+            i_months_rem = int(i_days_rem) // 30 if i_days_rem != float("inf") else 9999
+            inspect_status = (
+                "Inspect Due"  if i_miles_rem < 0 or i_days_rem < 0
+                else "Inspect Soon" if (i_miles_rem <= coming_up_miles or i_months_rem <= coming_up_months)
+                else "All Good"
+            )
+            inspect_due_date_str     = i_due_dt.strftime("%Y-%m-%d") if i_due_dt else None
+            inspect_miles_remaining  = int(i_miles_rem) if i_miles and i_miles_rem != float("inf") else None
+            inspect_months_remaining = i_months_rem if i_months else None
+            inspect_due_miles        = int(i_base_miles) + i_miles if i_miles else None
+
         services.append({**s,
             "miles_remaining": miles_remaining,
             "months_remaining": months_remaining,
             "last_service_date_formatted": parse_date(last_date_raw).strftime("%Y-%m-%d"),
             "due_date_str": due_date_time.strftime("%Y-%m-%d"),
             "due_miles": last_miles_raw + s.get("interval_miles", 0),
-            "status": status, "predicted": predicted, "priority": idx})
+            "status": status, "predicted": predicted, "priority": idx,
+            "inspect_status": inspect_status,
+            "inspect_due_date_str": inspect_due_date_str,
+            "inspect_miles_remaining": inspect_miles_remaining,
+            "inspect_months_remaining": inspect_months_remaining,
+            "inspect_due_miles": inspect_due_miles,
+        })
     return services
 
 
@@ -794,6 +869,8 @@ def publish_discovery(client):
                 "due_date": s["due_date_str"],
                 "category": s["category"],
                 "service_name": s["name"],
+                "inspect_status": s.get("inspect_status"),
+                "inspect_due_date": s.get("inspect_due_date_str"),
             }), retain=True)
 
 
@@ -910,6 +987,30 @@ def get_ha_sensors():
         ]
     except Exception:
         return []
+
+
+def search_ha_entities(q=""):
+    """Live entity search. Returns (results, error) — error is None on success."""
+    if not HA_TOKEN or HA_TOKEN == "PASTE_YOUR_LONG_LIVED_ACCESS_TOKEN_HERE":
+        return [], "no_token"
+    try:
+        resp = requests.get(
+            f"{HA_URL}/api/states",
+            headers={"Authorization": f"Bearer {HA_TOKEN}", "Content-Type": "application/json"},
+            timeout=3,
+        )
+        resp.raise_for_status()
+        sensors = [
+            {"id": s["entity_id"], "name": s["attributes"].get("friendly_name", s["entity_id"])}
+            for s in resp.json()
+            if s["entity_id"].startswith(("sensor.", "input_number.", "weather."))
+        ]
+        if q:
+            ql = q.lower()
+            sensors = [s for s in sensors if ql in s["id"].lower() or ql in s["name"].lower()]
+        return sensors[:50], None
+    except Exception:
+        return [], "connection_failed"
 
 
 # Migrate legacy JSON now that save_db is defined. Done at module import time
